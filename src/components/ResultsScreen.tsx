@@ -144,15 +144,10 @@ export const ResultsScreen = ({ empresa, cliente, rows, onReset }: Props) => {
           />
           <KpiCard
             label="Divergências de vínculo"
-            value={kpis.divergencias - kpis.notaNaoEncontrada - kpis.contratoNaoEncontrado < 0 ? 0 : 0 /* placeholder */}
+            value={kpis.divergencias}
             active={filter === "DIVERGENCIAS"}
             tone="info"
             onClick={() => setFilterAndReset(filter === "DIVERGENCIAS" ? "ALL" : "DIVERGENCIAS")}
-            displayValue={
-              rows.filter((r) =>
-                ["NOTA_OUTRO_CONTRATO", "CONTRATO_OUTRA_NOTA", "DUPLICIDADE"].includes(r.situacao),
-              ).length
-            }
           />
           <KpiCard
             label="Alertas (placa)"
@@ -345,13 +340,12 @@ const Field = ({ label, value }: { label: string; value: string }) => (
 interface KpiProps {
   label: string;
   value: number;
-  displayValue?: number;
   active: boolean;
   tone: "success" | "destructive" | "warning" | "info";
   onClick: () => void;
 }
 
-const KpiCard = ({ label, value, displayValue, active, tone, onClick }: KpiProps) => {
+const KpiCard = ({ label, value, active, tone, onClick }: KpiProps) => {
   const toneMap = {
     success: "border-success/30 [&[data-active=true]]:bg-success-soft [&[data-active=true]]:border-success",
     destructive:
@@ -376,9 +370,7 @@ const KpiCard = ({ label, value, displayValue, active, tone, onClick }: KpiProps
       )}
     >
       <div className="text-xs text-muted-foreground font-medium">{label}</div>
-      <div className={cn("text-2xl font-semibold mt-1 tabular-nums", valueColor[tone])}>
-        {displayValue ?? value}
-      </div>
+      <div className={cn("text-2xl font-semibold mt-1 tabular-nums", valueColor[tone])}>{value}</div>
     </button>
   );
 };

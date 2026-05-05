@@ -169,7 +169,12 @@ export function computeKpis(rows: MatchedRow[]): Kpis {
     if (r.situacao === "OK") ok++;
     else if (r.situacao === "CONTRATO_NAO_ENCONTRADO") cn++;
     else if (r.situacao === "NOTA_NAO_ENCONTRADA") nn++;
-    else div++;
+    else if (
+      r.situacao === "NOTA_OUTRO_CONTRATO" ||
+      r.situacao === "CONTRATO_OUTRA_NOTA" ||
+      r.situacao === "DUPLICIDADE"
+    )
+      div++;
     if (r.placaDivergente) alertas++;
   }
   return { total: rows.length, ok, contratoNaoEncontrado: cn, notaNaoEncontrada: nn, divergencias: div, alertas };
