@@ -1,16 +1,64 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { UploadScreen } from "@/components/UploadScreen";
+import { ResultsScreen } from "@/components/ResultsScreen";
+import { readXlsx, assertColumns } from "@/lib/parseXlsx";
+import { match, MatchedRow, parseBase, parseComp } from "@/lib/match";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
-  return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
-  );
+interface ResultsState {
+  empresa: string;
+  cliente: string;
+  rows: MatchedRow[];
+}
+
+const Index = () => {
+  const [results, setResults] = useState<ResultsState | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async ({
+    baseFile,
+    compFile,
+    empresa,
+    cliente,
+  }: {
+    baseFile: File;
+    compFile: File;
+    empresa: string;
+    cliente: string;
+  }) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [baseRaw, compRaw] = await Promise.all([readXlsx(baseFile), readXlsx(compFile)]);
+      assertColumns(baseRaw, ["PLACA", "CONTRATO", "NOTA", "CONTR. CLIENTE", "APOS DESC"], "Relatório Base (GRL053)");
+      assertColumns(
+        compRaw,
+        ["Placa", "Número NF", "Nr Contr Original", "Total Líquido"],
+        "Relatório Complementar (Inpasa)",
+      );
+      const base = parseBase(baseRaw);
+      const comp = parseComp(compRaw);
+      const rows = match(base, comp);
+      setResults({ empresa: empresa.trim(), cliente: cliente.trim(), rows });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao processar os arquivos.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (results) {
+    return (
+      <ResultsScreen
+        empresa={results.empresa}
+        cliente={results.cliente}
+        rows={results.rows}
+        onReset={() => setResults(null)}
+      />
+    );
+  }
+
+  return <UploadScreen onSubmit={handleSubmit} loading={loading} error={error} />;
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
