@@ -1,0 +1,176 @@
+import { getCol, RawRow } from "./parseXlsx";
+import { key, normalizeContrato, normalizeNota, normalizePlaca, toNumber } from "./normalize";
+
+export type Situacao =
+  | "OK"
+  | "CONTRATO_NAO_ENCONTRADO"
+  | "NOTA_NAO_ENCONTRADA"
+  | "NOTA_OUTRO_CONTRATO"
+  | "CONTRATO_OUTRA_NOTA"
+  | "DUPLICIDADE";
+
+export const situacaoLabel: Record<Situacao, string> = {
+  OK: "Vínculo OK",
+  CONTRATO_NAO_ENCONTRADO: "Contrato não encontrado",
+  NOTA_NAO_ENCONTRADA: "Nota não encontrada",
+  NOTA_OUTRO_CONTRATO: "Nota vinculada a outro contrato",
+  CONTRATO_OUTRA_NOTA: "Contrato vinculado a outra nota",
+  DUPLICIDADE: "Duplicidade",
+};
+
+export interface BaseRow {
+  placa: string;
+  contrato: string;
+  nota: string;
+  contratoCliente: string;
+  aposDesc: number | null;
+  raw: RawRow;
+}
+
+export interface CompRow {
+  placa: string;
+  numeroNF: string;
+  nrContrOriginal: string;
+  totalLiquido: number | null;
+  raw: RawRow;
+}
+
+export interface MatchedRow {
+  id: number;
+  situacao: Situacao;
+  detalhe: string;
+  placaDivergente: boolean;
+  base: BaseRow;
+  comp: CompRow | null;
+  /** Outras ocorrências encontradas no complementar (úteis no detalhe). */
+  hintsContrato: CompRow[];
+  hintsNota: CompRow[];
+}
+
+export function parseBase(rows: RawRow[]): BaseRow[] {
+  return rows.map((r) => ({
+    placa: normalizePlaca(getCol(r, ["PLACA"])),
+    contrato: normalizeContrato(getCol(r, ["CONTRATO"])),
+    nota: normalizeNota(getCol(r, ["NOTA"])),
+    contratoCliente: normalizeContrato(getCol(r, ["CONTR. CLIENTE", "CONTR CLIENTE", "CONTRATO CLIENTE"])),
+    aposDesc: toNumber(getCol(r, ["APOS DESC", "APÓS DESC"])),
+    raw: r,
+  }));
+}
+
+export function parseComp(rows: RawRow[]): CompRow[] {
+  return rows.map((r) => ({
+    placa: normalizePlaca(getCol(r, ["Placa"])),
+    numeroNF: normalizeNota(getCol(r, ["Número NF", "Numero NF", "Nº NF", "Nr NF"])),
+    nrContrOriginal: normalizeContrato(getCol(r, ["Nr Contr Original", "Nro Contr Original", "Numero Contr Original"])),
+    totalLiquido: toNumber(getCol(r, ["Total Líquido", "Total Liquido"])),
+    raw: r,
+  }));
+}
+
+export function match(base: BaseRow[], comp: CompRow[]): MatchedRow[] {
+  const byKey = new Map<string, CompRow[]>();
+  const byContrato = new Map<string, CompRow[]>();
+  const byNota = new Map<string, CompRow[]>();
+
+  for (const c of comp) {
+    const k = key(c.nrContrOriginal, c.numeroNF);
+    if (c.nrContrOriginal && c.numeroNF) {
+      if (!byKey.has(k)) byKey.set(k, []);
+      byKey.get(k)!.push(c);
+    }
+    if (c.nrContrOriginal) {
+      if (!byContrato.has(c.nrContrOriginal)) byContrato.set(c.nrContrOriginal, []);
+      byContrato.get(c.nrContrOriginal)!.push(c);
+    }
+    if (c.numeroNF) {
+      if (!byNota.has(c.numeroNF)) byNota.set(c.numeroNF, []);
+      byNota.get(c.numeroNF)!.push(c);
+    }
+  }
+
+  const result: MatchedRow[] = [];
+  base.forEach((b, idx) => {
+    const k = key(b.contratoCliente, b.nota);
+    const matchesKey = (b.contratoCliente && b.nota && byKey.get(k)) || [];
+    const matchesContrato = (b.contratoCliente && byContrato.get(b.contratoCliente)) || [];
+    const matchesNota = (b.nota && byNota.get(b.nota)) || [];
+
+    let situacao: Situacao;
+    let detalhe = "";
+    let comp: CompRow | null = null;
+
+    if (matchesKey.length > 1) {
+      situacao = "DUPLICIDADE";
+      comp = matchesKey[0];
+      detalhe = `Encontradas ${matchesKey.length} ocorrências do mesmo contrato + nota no complementar.`;
+    } else if (matchesKey.length === 1) {
+      situacao = "OK";
+      comp = matchesKey[0];
+      detalhe = "Contrato e nota conferem com o complementar.";
+    } else if (matchesContrato.length === 0 && matchesNota.length === 0) {
+      situacao = "CONTRATO_NAO_ENCONTRADO";
+      detalhe = "Contrato e nota não foram localizados no complementar.";
+    } else if (matchesContrato.length === 0) {
+      situacao = "CONTRATO_NAO_ENCONTRADO";
+      comp = matchesNota[0];
+      detalhe = `Nota ${b.nota} existe no complementar, mas vinculada ao contrato ${matchesNota[0].nrContrOriginal}.`;
+    } else if (matchesNota.length === 0) {
+      situacao = "NOTA_NAO_ENCONTRADA";
+      comp = matchesContrato[0];
+      detalhe = `Contrato ${b.contratoCliente} existe no complementar, mas com outra nota (ex.: ${matchesContrato[0].numeroNF}).`;
+    } else {
+      // Existem registros para ambos, mas nenhum par exato → divergência cruzada.
+      situacao = "NOTA_OUTRO_CONTRATO";
+      comp = matchesNota[0];
+      detalhe = `Nota ${b.nota} aparece no complementar com contrato ${matchesNota[0].nrContrOriginal} (esperado ${b.contratoCliente}).`;
+    }
+
+    // Reclassificação: se contrato existe vinculado a outra nota e nota existe vinculada a outro contrato,
+    // considerar "Contrato vinculado a outra nota" quando a divergência principal é por nota mismatched no mesmo contrato.
+    if (situacao === "NOTA_OUTRO_CONTRATO" && matchesContrato.length > 0) {
+      // Mantém NOTA_OUTRO_CONTRATO; mas se a nota só tem 1 ocorrência e é exatamente um swap,
+      // o detalhe acima já é suficiente.
+    }
+
+    const placaDivergente = !!(comp && b.placa && comp.placa && b.placa !== comp.placa);
+
+    result.push({
+      id: idx,
+      situacao,
+      detalhe,
+      placaDivergente,
+      base: b,
+      comp,
+      hintsContrato: matchesContrato.slice(0, 5),
+      hintsNota: matchesNota.slice(0, 5),
+    });
+  });
+
+  return result;
+}
+
+export interface Kpis {
+  total: number;
+  ok: number;
+  contratoNaoEncontrado: number;
+  notaNaoEncontrada: number;
+  divergencias: number;
+  alertas: number;
+}
+
+export function computeKpis(rows: MatchedRow[]): Kpis {
+  let ok = 0,
+    cn = 0,
+    nn = 0,
+    div = 0,
+    alertas = 0;
+  for (const r of rows) {
+    if (r.situacao === "OK") ok++;
+    else if (r.situacao === "CONTRATO_NAO_ENCONTRADO") cn++;
+    else if (r.situacao === "NOTA_NAO_ENCONTRADA") nn++;
+    else div++;
+    if (r.placaDivergente) alertas++;
+  }
+  return { total: rows.length, ok, contratoNaoEncontrado: cn, notaNaoEncontrada: nn, divergencias: div, alertas };
+}
