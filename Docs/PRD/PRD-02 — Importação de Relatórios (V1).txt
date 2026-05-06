@@ -1,0 +1,267 @@
+
+# PRD-02 — Importação de Relatórios (V1)
+
+## 1. Objetivo
+
+Permitir a importação simples e controlada de dois tipos de relatório:
+
+- Relatório Base (GRL053) — origem: cooperativa
+- Relatório Complementar (Inpasa) — origem: cliente
+
+A importação deve ser rápida, determinística e sem necessidade de configuração manual.
+
+---
+
+## 2. Princípios da Importação
+
+### 2.1 Sem inteligência desnecessária
+- Não tentar “adivinhar” colunas
+- Não usar heurísticas complexas
+- Não permitir múltiplos formatos
+
+### 2.2 Estrutura fixa
+- Cada tipo de relatório possui estrutura conhecida
+- Colunas são definidas no código
+
+### 2.3 Falha explícita
+- Se estrutura não bater → erro claro ao usuário
+
+---
+
+## 3. Tipos de Arquivo Suportados
+
+### Formatos:
+- `.xlsx`
+- `.xls`
+- `.csv` (opcional, se simples)
+
+### Regras:
+- Arquivo deve conter cabeçalho válido
+- Arquivo não pode estar vazio
+
+---
+
+## 4. Fluxo de Importação
+
+### 4.1 Importação do Relatório Base (GRL053)
+
+Usuário deve:
+
+1. Selecionar arquivo
+2. Informar:
+   - **Empresa/Cooperativa**
+
+Após isso:
+
+```text
+Sistema valida estrutura → carrega dados em memória
+````
+
+---
+
+### 4.2 Importação do Relatório Complementar (Inpasa)
+
+Usuário deve:
+
+1. Selecionar arquivo
+2. Informar:
+
+   * **Cliente (ex: Inpasa)**
+
+Após isso:
+
+```text
+Sistema valida estrutura → carrega dados em memória
+```
+
+---
+
+## 5. Estrutura Esperada dos Relatórios
+
+### 5.1 Relatório Base — GRL053
+
+Colunas obrigatórias:
+
+* PLACA
+* CONTRATO
+* NOTA
+* CONTR. CLIENTE
+* APOS DESC
+
+Observação:
+
+* Os nomes devem bater exatamente com o layout esperado
+* Não haverá mapeamento dinâmico
+
+---
+
+### 5.2 Relatório Complementar — Inpasa
+
+Colunas obrigatórias:
+
+* Placa
+* Número NF
+* Nr Contr Original
+* Total Líquido
+
+---
+
+## 6. Validações na Importação
+
+### 6.1 Validação de Estrutura
+
+* Verificar se todas as colunas obrigatórias existem
+* Se faltar qualquer coluna:
+  → Bloquear importação
+
+Mensagem exemplo:
+
+```text
+Coluna obrigatória não encontrada: "Nr Contr Original"
+```
+
+---
+
+### 6.2 Validação de Conteúdo
+
+Para cada linha:
+
+* Ignorar linhas completamente vazias
+* Garantir que pelo menos:
+
+  * contrato
+  * nota
+
+existam
+
+Se não existir:
+
+```text
+Linha ignorada por falta de dados obrigatórios
+```
+
+---
+
+### 6.3 Limpeza de Dados (pré-processamento)
+
+Durante importação:
+
+* Remover espaços extras
+* Converter para string
+* Padronizar campos numéricos como texto
+
+Exemplo:
+
+```text
+" 12345 " → "12345"
+```
+
+---
+
+## 7. Armazenamento (V1)
+
+* Dados armazenados apenas em memória (estado da aplicação)
+* Estrutura sugerida:
+
+```ts
+{
+  base: RegistroBase[],
+  complementar: RegistroComplementar[],
+  empresa: string,
+  cliente: string
+}
+```
+
+---
+
+## 8. Reimportação
+
+* Nova importação substitui totalmente os dados anteriores
+* Não há merge
+* Não há histórico
+
+---
+
+## 9. Estados da Tela
+
+### Antes da importação:
+
+* Tela vazia
+* Botão de importar visível
+
+### Após importar base:
+
+* Indicar empresa carregada
+* Aguardar complementar
+
+### Após importar complementar:
+
+* Liberar conferência
+
+---
+
+## 10. Feedback Visual (IMPORTANTE)
+
+Durante importação:
+
+* Exibir indicador de carregamento:
+
+```text
+Importando arquivo...
+Processando linhas...
+```
+
+Após concluir:
+
+```text
+Arquivo importado com sucesso (X registros)
+```
+
+Se erro:
+
+```text
+Erro ao importar: coluna "NOTA" não encontrada
+```
+
+---
+
+## 11. Não Objetivos (V1)
+
+* Não suportar múltiplos layouts
+* Não salvar histórico de importação
+* Não validar regras de negócio aqui (isso é PRD-04)
+* Não permitir edição manual de dados
+
+---
+
+## 12. Preparação para Evolução
+
+Mesmo sendo fixo, estruturar código assim:
+
+```text
+importadores/
+  importador-base-grl053.ts
+  importador-inpasa.ts
+```
+
+Facilita adicionar novos clientes no futuro:
+
+```text
+importador-bunge.ts
+importador-cargill.ts
+```
+
+---
+
+## 13. Regra Crítica
+
+```text
+Importação NÃO pode tentar corrigir erro de layout.
+Se o arquivo estiver errado → usuário deve corrigir na origem.
+```
+
+```
+
+---
+
+```

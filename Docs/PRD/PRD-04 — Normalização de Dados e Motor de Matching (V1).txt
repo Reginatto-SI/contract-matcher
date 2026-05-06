@@ -1,0 +1,314 @@
+
+# PRD-04 — Normalização de Dados e Motor de Matching (V1)
+
+## 1. Objetivo
+
+Definir regras determinísticas para:
+
+- Normalização de dados (contrato e nota)
+- Identificação de correspondência entre base e complementar
+- Classificação do resultado da conferência
+
+Este PRD é o núcleo lógico do sistema.
+
+---
+
+## 2. Princípio Fundamental
+
+```text
+Matching é baseado exclusivamente em:
+
+CONTRATO CLIENTE + NOTA FISCAL
+````
+
+Qualquer outra informação:
+
+* NÃO participa do vínculo
+* Apenas auxilia na análise
+
+---
+
+## 3. Campos Utilizados
+
+### 3.1 Relatório Base (GRL053)
+
+* CONTR. CLIENTE
+* NOTA
+* PLACA (informativo)
+* APOS DESC (informativo)
+
+---
+
+### 3.2 Relatório Complementar (Inpasa)
+
+* Nr Contr Original
+* Número NF
+* Placa (informativo)
+* Total Líquido (informativo)
+
+---
+
+## 4. Normalização de Dados
+
+### 4.1 Regra Geral
+
+Antes de qualquer comparação:
+
+```text
+Todos os campos devem ser normalizados
+```
+
+---
+
+### 4.2 Normalização de Contrato
+
+#### Problema:
+
+Contrato pode vir com texto + números
+
+Exemplos:
+
+```text
+MTP 16876
+MTP-16876
+MTP - 16876
+AFX 33610-33316
+```
+
+---
+
+### 4.3 Regra de Normalização
+
+```text
+1. Remover tudo que não for número
+2. Extrair apenas o PRIMEIRO bloco numérico
+```
+
+---
+
+### 4.4 Exemplos
+
+```text
+MTP 16876        → 16876
+MTP-16876        → 16876
+MTP - 16876      → 16876
+AFX 33610-33316  → 33610
+```
+
+---
+
+### 4.5 Regra Crítica
+
+```text
+SE NÃO ENCONTRAR NÚMERO → REGISTRO INVÁLIDO PARA MATCH
+```
+
+---
+
+### 4.6 Normalização de Nota Fiscal
+
+```text
+- Remover espaços
+- Remover caracteres não numéricos
+- Manter apenas números
+```
+
+Exemplo:
+
+```text
+" 000123 " → "123"
+```
+
+---
+
+## 5. Estrutura de Matching
+
+### 5.1 Estratégia
+
+Criar uma estrutura indexada do complementar:
+
+```ts
+chave = contrato_normalizado + "_" + nota_normalizada
+```
+
+---
+
+### 5.2 Exemplo
+
+```text
+16876_25031
+```
+
+---
+
+### 5.3 Fluxo
+
+Para cada linha do base:
+
+1. Normalizar contrato + nota
+2. Buscar no complementar pela chave
+3. Avaliar resultado
+
+---
+
+## 6. Tipos de Resultado
+
+### 6.1 Vínculo
+
+#### 1. VÍNCULO OK
+
+```text
+Contrato + Nota encontrados exatamente
+```
+
+---
+
+#### 2. CONTRATO NÃO ENCONTRADO
+
+```text
+Contrato não existe no complementar
+```
+
+---
+
+#### 3. NOTA NÃO ENCONTRADA
+
+```text
+Contrato existe, mas nota não encontrada
+```
+
+---
+
+#### 4. NOTA VINCULADA A OUTRO CONTRATO
+
+```text
+Nota existe no complementar, mas vinculada a outro contrato
+```
+
+---
+
+#### 5. CONTRATO VINCULADO A OUTRA NOTA
+
+```text
+Contrato existe, mas com nota diferente
+```
+
+---
+
+#### 6. MÚLTIPLOS REGISTROS (DUPLICIDADE)
+
+```text
+Mais de um registro encontrado para mesma chave
+```
+
+---
+
+## 7. Conferência (Campos Informativos)
+
+Após vínculo OK:
+
+### 7.1 Placa
+
+```text
+Se diferente → alertar:
+
+"Placa divergente"
+```
+
+---
+
+### 7.2 Peso
+
+```text
+APOS DESC (fiscal)
+vs
+Total Líquido (físico)
+
+→ NÃO comparar como erro
+→ Apenas exibir
+```
+
+---
+
+## 8. Estrutura de Saída
+
+Para cada linha:
+
+```ts
+{
+  contrato: string,
+  nota: string,
+  status: string,
+  detalhe: string,
+  placa_base: string,
+  placa_complementar: string,
+  peso_base: number,
+  peso_complementar: number
+}
+```
+
+---
+
+## 9. Regras de Prioridade (IMPORTANTE)
+
+A classificação deve seguir ordem:
+
+```text
+1. Erros de chave (contrato/nota)
+2. Duplicidade
+3. Vínculo OK
+4. Alertas (placa)
+```
+
+---
+
+## 10. Regras de Segurança
+
+```text
+Matching nunca deve:
+
+- Inferir dados
+- Corrigir valores automaticamente
+- Assumir proximidade (ex: "parecido")
+```
+
+---
+
+## 11. Não Objetivos (V1)
+
+* Não usar fuzzy match
+* Não usar IA
+* Não tentar corrigir contrato
+* Não validar peso como erro
+* Não usar placa como chave
+
+---
+
+## 12. Princípio de Implementação
+
+```text
+Matching deve ser:
+
+- Determinístico
+- Reprodutível
+- Explicável linha a linha
+```
+
+---
+
+## 13. Observação Crítica
+
+```text
+Se o matching estiver errado, TODO o sistema perde credibilidade.
+```
+
+Por isso:
+
+* Regras devem ser simples
+* Código deve ser transparente
+* Logs devem ser claros
+
+```
+
+---
+

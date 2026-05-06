@@ -1,0 +1,281 @@
+
+# PRD-05 — Tela de Conferência (V1)
+
+## 1. Objetivo
+
+Exibir de forma clara, objetiva e operacional o resultado do matching entre:
+
+- Relatório Base (GRL053)
+- Relatório Complementar (Inpasa)
+
+A tela deve permitir que o usuário identifique rapidamente:
+
+- Se o vínculo está correto
+- Onde está o erro
+- O que precisa ser verificado
+
+---
+
+## 2. Princípio de UX
+
+```text
+Não mostrar dados — mostrar diagnóstico
+````
+
+Evitar telas “cruas” com muitas colunas sem interpretação.
+
+---
+
+## 3. Estrutura da Tela
+
+### 3.1 Cabeçalho
+
+Exibir contexto da análise:
+
+```text
+Empresa (Base): COOPERATIVA X
+Cliente (Complementar): INPASA
+Total de registros: 1.254
+```
+
+---
+
+### 3.2 Ações principais (Header)
+
+* Importar arquivos (abre modal)
+* Limpar análise (reset total)
+* Exportar (Excel/PDF)
+
+---
+
+## 4. KPIs (Resumo no topo)
+
+Exibir cards clicáveis:
+
+```text
+Vínculo OK           (850)
+Contrato não encontrado (120)
+Nota não encontrada     (90)
+Divergências            (194)
+```
+
+### Regras:
+
+* Clicar no card → filtra grid
+* Sempre visível
+* Atualiza em tempo real
+
+---
+
+## 5. Grid Principal
+
+### 5.1 Estrutura das Colunas
+
+Ordem recomendada:
+
+```text
+Situação
+Detalhe
+Contrato Cliente
+Nota Fiscal
+Placa Base
+Placa Cliente
+Peso Fiscal
+Peso Cliente
+```
+
+---
+
+### 5.2 Coluna "Situação"
+
+Valores possíveis:
+
+```text
+Vínculo OK
+Contrato não encontrado
+Nota não encontrada
+Nota em outro contrato
+Contrato com outra nota
+Duplicidade
+```
+
+---
+
+### 5.3 Coluna "Detalhe"
+
+Mensagem clara, exemplo:
+
+```text
+Contrato encontrado, mas nota não corresponde
+Placa divergente entre base e cliente
+Múltiplos registros encontrados
+```
+
+---
+
+## 6. Cores e Destaque Visual
+
+### Regras:
+
+* Verde → OK
+* Vermelho → erro de vínculo
+* Amarelo → alerta (ex: placa divergente)
+* Cinza → neutro
+
+---
+
+## 7. Filtros
+
+### 7.1 Filtros rápidos (botões)
+
+* Todos
+* Apenas OK
+* Apenas com erro
+* Apenas divergentes
+
+---
+
+### 7.2 Filtros avançados
+
+* Contrato
+* Nota
+* Placa
+* Situação
+
+---
+
+## 8. Busca
+
+Campo de busca global:
+
+* Busca por:
+
+  * contrato
+  * nota
+  * placa
+
+---
+
+## 9. Paginação (OBRIGATÓRIO)
+
+```text
+Nunca usar scroll infinito
+```
+
+### Regras:
+
+* 50 registros por página
+* Navegação simples
+* Performance previsível
+
+---
+
+## 10. Drawer de Detalhes
+
+Ao clicar na linha:
+
+Abrir painel lateral com:
+
+### 10.1 Dados Base
+
+* Contrato cliente
+* Nota
+* Placa
+* Peso fiscal
+
+---
+
+### 10.2 Dados Complementar
+
+* Nr Contr Original
+* Número NF
+* Placa
+* Peso líquido
+
+---
+
+### 10.3 Resultado da Conferência
+
+```text
+Status: Nota vinculada a outro contrato
+Detalhe: Nota encontrada no contrato 99999
+```
+
+---
+
+## 11. Estados da Tela
+
+### 11.1 Sem dados
+
+```text
+Nenhum dado importado
+```
+
+---
+
+### 11.2 Carregando
+
+```text
+Processando conferência...
+```
+
+---
+
+### 11.3 Com erro
+
+```text
+Erro na importação ou processamento
+```
+
+---
+
+## 12. Performance
+
+Meta:
+
+```text
+Até 10.000 registros sem travar
+```
+
+Regras:
+
+* Processamento em memória
+* Renderização paginada
+* Evitar re-render desnecessário
+
+---
+
+## 13. Não Objetivos (V1)
+
+* Edição manual de dados
+* Correção dentro da tela
+* Salvar alterações
+* Multiusuário
+
+---
+
+## 14. Regra Crítica
+
+```text
+A tela deve explicar o problema sem o usuário precisar interpretar dados brutos.
+```
+
+---
+
+## 15. Padrões Visuais Obrigatórios
+
+* Usar botão “…” para ações
+* Seguir padrão de cards + grid
+* Layout compacto (evitar scroll vertical excessivo)
+* Priorizar leitura rápida
+
+---
+
+## 16. Observação Final
+
+```text
+Se o usuário precisar pensar muito para entender o erro,
+a tela falhou.
+```
+
+```

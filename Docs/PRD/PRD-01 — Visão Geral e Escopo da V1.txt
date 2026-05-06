@@ -1,0 +1,194 @@
+
+# PRD-01 — Visão Geral e Escopo da V1
+
+## 1. Objetivo
+
+Desenvolver uma ferramenta interna simples para conferência de contratos entre a cooperativa e seus clientes (Inpasa, Cargill, FS, Bunge, etc.), com foco em validar se o faturamento realizado pela cooperativa está sendo corretamente refletido no embarque do cliente.
+
+A ferramenta deve permitir a importação de dois relatórios:
+
+- Relatório Base (GRL053) — origem: cooperativa
+- Relatório Complementar — origem: cliente
+
+E realizar o cruzamento entre eles para análise operacional.
+
+---
+
+## 2. Natureza do Sistema
+
+- Ferramenta **100% interna**
+- Não é SaaS
+- Não possui:
+  - login
+  - senha
+  - controle de acesso
+  - multiusuário
+- Uso local/operacional (estilo “planilha avançada”)
+
+---
+
+## 3. Escopo da Versão 1 (V1)
+
+### Inclui:
+- Importação de:
+  - 1 relatório base (GRL053)
+  - 1 relatório complementar (Inpasa)
+- Processamento em memória (sem banco de dados)
+- Conferência de contratos via regra fixa
+- Exibição dos resultados em tela
+- Exportação (Excel/PDF)
+
+### Não inclui:
+- Persistência de dados
+- Histórico de análises
+- Cadastro de layouts
+- Parametrização de colunas (DE/PARA)
+- Múltiplos layouts simultâneos
+- Integrações externas
+
+---
+
+## 4. Regra de Negócio (Contexto Operacional)
+
+A cooperativa realiza faturamento para clientes com base em contratos.
+
+Existem dois tipos de contrato:
+
+### 4.1 Contrato Interno (Cooperativa)
+- Exemplo: `123`
+- Utilizado internamente pela cooperativa
+
+### 4.2 Contrato Triangular (Contrato Cliente)
+- Exemplo: `102030`
+- Representa o vínculo entre:
+  - Agricultor
+  - Cooperativa
+  - Cliente
+
+Este é o **contrato principal da operação**.
+
+---
+
+## 5. Regra de Ouro do Sistema
+
+```text
+O contrato triangular (contrato cliente) e a nota fiscal devem ser iguais entre cooperativa e cliente.
+````
+
+Ou seja:
+
+```text
+GRL053 (Base)
+CONTR. CLIENTE + NOTA
+
+deve ser igual a
+
+Relatório Cliente
+Nr Contr Original + Número NF
+```
+
+Se isso não acontecer, existe erro operacional.
+
+---
+
+## 6. Objetivo da Conferência
+
+Permitir que a cooperativa responda:
+
+```text
+"O cliente está embarcando a mercadoria no mesmo contrato e nota que nós faturamos?"
+```
+
+---
+
+## 7. Estrutura Simplificada do Sistema
+
+### Entrada:
+
+1. Importação do relatório base
+
+   * Usuário informa: **empresa/cooperativa**
+
+2. Importação do relatório complementar
+
+   * Usuário informa: **cliente (Inpasa, etc.)**
+
+---
+
+### Processamento:
+
+* Sistema cruza os dados com base em:
+
+  * Contrato cliente
+  * Nota fiscal
+
+---
+
+### Saída:
+
+Para cada registro do relatório base:
+
+* Verifica se existe correspondência no complementar
+* Classifica o resultado
+* Exibe detalhes da conferência
+
+---
+
+## 8. Modelo de Funcionamento (Sem Persistência)
+
+* Todos os dados são processados em memória
+* Não há gravação em banco
+* Ao atualizar a página:
+
+  * todos os dados são perdidos
+* Usuário pode reimportar os arquivos a qualquer momento
+
+---
+
+## 9. Princípios da V1
+
+### 9.1 Simplicidade acima de tudo
+
+Evitar qualquer tipo de configuração dinâmica
+
+### 9.2 Regras fixas no código
+
+Layouts e validações são hardcoded
+
+### 9.3 Transparência operacional
+
+Sistema deve explicar claramente o problema, não apenas classificar
+
+### 9.4 Evolução incremental
+
+Primeiro validar com:
+
+* 1 base (GRL053)
+* 1 cliente (Inpasa)
+
+Depois expandir
+
+---
+
+## 10. Resultado Esperado
+
+A ferramenta deve permitir identificar:
+
+* Se o cliente:
+
+  * utilizou o contrato correto
+  * utilizou a nota correta
+* Onde estão os erros de vínculo
+* Diferenças operacionais entre cooperativa e cliente
+
+---
+
+## 11. Observações Importantes
+
+* A placa do veículo **não faz parte da chave**
+* Peso fiscal (base) e peso físico (cliente):
+
+  * **não são comparáveis**
+  * são apenas informativos
+
+---

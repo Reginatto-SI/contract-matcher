@@ -1,0 +1,167 @@
+
+# PRD-03 — Mapeamento Fixo de Colunas (V1)
+
+## 1. Objetivo
+
+Definir de forma explícita e fixa:
+
+- Quais colunas existem em cada relatório
+- Qual o significado de cada coluna
+- Quais participam do vínculo
+- Quais são apenas informativas
+
+Este PRD elimina qualquer ambiguidade na leitura dos arquivos.
+
+---
+
+## 2. Princípio da V1
+
+```text
+Não existe mapeamento dinâmico (DE/PARA)
+````
+
+* Layouts são fixos no código
+* Qualquer mudança de layout exige ajuste técnico
+
+---
+
+## 3. Relatório Base — GRL053
+
+### 3.1 Colunas utilizadas
+
+| Campo Interno    | Nome no Relatório | Tipo   | Função              |
+| ---------------- | ----------------- | ------ | ------------------- |
+| placa            | PLACA             | texto  | Informativo         |
+| contrato_interno | CONTRATO          | texto  | Informativo         |
+| data_emissao     | DATA ROMANEIO     | data   | Informativo         |
+| nota             | NOTA              | texto  | Vínculo             |
+| peso_fiscal      | APOS DESC         | número | Informativo         |
+| contrato_cliente | CONTR. CLIENTE    | texto  | Vínculo (principal) |
+| observacao       | OBSERVAÇÃO NF     | texto  | Informativo         |
+
+---
+
+## 4. Relatório Complementar — Inpasa
+
+### 4.1 Colunas utilizadas
+
+| Campo Interno    | Nome no Relatório | Tipo   | Função              |
+| ---------------- | ----------------- | ------ | ------------------- |
+| placa            | Placa             | texto  | Informativo         |
+| nota             | Número NF         | texto  | Vínculo             |
+| contrato_cliente | Nr Contr Original | texto  | Vínculo (principal) |
+| peso_fisico      | Total Líquido     | número | Informativo         |
+
+---
+
+## 5. Regra de Vínculo
+
+```text
+Base:
+CONTR. CLIENTE + NOTA
+
+Complementar:
+Nr Contr Original + Número NF
+```
+
+---
+
+## 6. Classificação dos Campos
+
+### 6.1 Campos de Vínculo (MATCH)
+
+```text
+- contrato_cliente
+- nota
+```
+
+---
+
+### 6.2 Campos Informativos
+
+```text
+- placa
+- peso
+- contrato interno
+- data
+- observações
+```
+
+---
+
+## 7. Regras Importantes
+
+### 7.1 Placa
+
+```text
+NÃO faz parte do vínculo
+```
+
+* Pode divergir
+* Serve apenas como alerta visual
+
+---
+
+### 7.2 Peso
+
+```text
+NÃO é comparável diretamente
+```
+
+* Base = peso fiscal
+* Complementar = peso físico
+* Nunca usar como critério de erro
+
+---
+
+## 8. Regra Crítica
+
+```text
+O sistema NÃO deve inferir colunas
+```
+
+Se o nome não bater:
+
+→ erro na importação
+
+---
+
+## 9. Estrutura de Código (Referência)
+
+```text
+layouts/
+  base-grl053.ts
+  complementar-inpasa.ts
+```
+
+Cada arquivo deve conter:
+
+* nome da coluna esperada
+* campo interno correspondente
+
+---
+
+## 10. Não Objetivos (V1)
+
+* Não permitir edição de colunas
+* Não permitir renomeação
+* Não suportar múltiplos layouts por cliente
+* Não usar aliases dinâmicos
+
+---
+
+## 11. Observação Final
+
+```text
+Se o mapeamento estiver errado,
+todo o sistema funciona errado sem dar erro.
+```
+
+Por isso:
+
+* Deve ser explícito
+* Deve ser fixo
+* Deve ser simples
+
+```
+
