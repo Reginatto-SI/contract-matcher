@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { UploadScreen } from "@/components/UploadScreen";
 import { ResultsScreen } from "@/components/ResultsScreen";
-import { readXlsx, assertColumns } from "@/lib/parseXlsx";
+import { readXlsx } from "@/lib/parseXlsx";
 import { match, MatchedRow, parseBase, parseComp } from "@/lib/match";
 
 interface ResultsState {
@@ -29,13 +29,22 @@ const Index = () => {
     setLoading(true);
     setError(null);
     try {
-      const [baseRaw, compRaw] = await Promise.all([readXlsx(baseFile), readXlsx(compFile)]);
-      assertColumns(baseRaw, ["PLACA", "CONTRATO", "NOTA", "CONTR. CLIENTE", "APOS DESC"], "Relatório Base (GRL053)");
-      assertColumns(
-        compRaw,
-        ["Placa", "Número NF", "Nr Contr Original", "Total Líquido"],
-        "Relatório Complementar (Inpasa)",
-      );
+      const [baseRaw, compRaw] = await Promise.all([
+        readXlsx(baseFile, {
+          // Regra fixa da V1 (PRD-02/03): GRL053 usa primeira aba e cabeçalho na linha 3.
+          // Não substituir por detecção automática sem nova decisão de produto.
+          headerRow: 3,
+          requiredColumns: ["PLACA", "CONTRATO", "NOTA", "CONTR. CLIENTE", "APOS DESC"],
+          fileLabel: "Relatório Base (GRL053)",
+        }),
+        readXlsx(compFile, {
+          // Regra fixa da V1 (PRD-02/03): Inpasa usa primeira aba e cabeçalho na linha 2.
+          // Não substituir por detecção automática sem nova decisão de produto.
+          headerRow: 2,
+          requiredColumns: ["Placa", "Número NF", "Nr Contr Original", "Total Líquido"],
+          fileLabel: "Relatório Complementar (Inpasa)",
+        }),
+      ]);
       const base = parseBase(baseRaw);
       const comp = parseComp(compRaw);
       const rows = match(base, comp);

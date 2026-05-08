@@ -44,7 +44,7 @@ const FilePicker = ({ label, hint, file, onChange }: FilePickerProps) => {
       <input
         ref={ref}
         type="file"
-        accept=".xlsx"
+        accept=".xlsx,.xls"
         className="hidden"
         onChange={(e) => onChange(e.target.files?.[0] ?? null)}
       />
@@ -99,8 +99,8 @@ export const UploadScreen = ({ onSubmit, loading, error }: Props) => {
         <Card className="p-8">
           <h2 className="text-lg font-semibold mb-1">Iniciar nova conferência</h2>
           <p className="text-sm text-muted-foreground mb-6">
-            Importe os dois relatórios em <code className="text-xs bg-muted px-1 py-0.5 rounded">.xlsx</code> e informe
-            empresa e cliente.
+            Importe os dois relatórios em <code className="text-xs bg-muted px-1 py-0.5 rounded">.xlsx</code> ou{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">.xls</code> e informe empresa e cliente.
           </p>
 
           <div className="grid md:grid-cols-2 gap-6">
@@ -113,7 +113,7 @@ export const UploadScreen = ({ onSubmit, loading, error }: Props) => {
               </div>
               <FilePicker
                 label="Selecione o GRL053"
-                hint="Clique ou arraste o arquivo .xlsx"
+                hint="Clique ou arraste o arquivo .xlsx ou .xls"
                 file={baseFile}
                 onChange={setBaseFile}
               />
@@ -137,7 +137,7 @@ export const UploadScreen = ({ onSubmit, loading, error }: Props) => {
               </div>
               <FilePicker
                 label="Selecione o Inpasa"
-                hint="Clique ou arraste o arquivo .xlsx"
+                hint="Clique ou arraste o arquivo .xlsx ou .xls"
                 file={compFile}
                 onChange={setCompFile}
               />
