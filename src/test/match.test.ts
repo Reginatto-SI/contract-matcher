@@ -537,19 +537,24 @@ describe("KPIs filtrados da conferência", () => {
     expect(kpis.alertas).toBe(1);
   });
 
-  it("busca textual encontra registros por nota e por placa", () => {
+  it("busca textual encontra registros por Contrato MX, contrato cliente, nota e placas", () => {
     const rows = match(
       [
-        baseRow({ contratoCliente: "16883", nota: "26384", placa: "MPQ9A17" }),
-        baseRow({ contratoCliente: "17000", nota: "30000", placa: "ISF6455" }),
+        baseRow({ contrato_interno: "1467", contratoCliente: "16883", nota: "26384", placa: "MPQ9A17" }),
+        baseRow({ contrato_interno: "2500", contratoCliente: "17000", nota: "30000", placa: "ISF6455" }),
+        baseRow({ contrato_interno: "3000", contratoCliente: "18000", nota: "40000", placa: "ZZZ9999" }),
       ],
       [
         compRow({ nrContrOriginal: "16883", numeroNF: "26384", placa: "QBG4784" }),
-        compRow({ nrContrOriginal: "17000", numeroNF: "30000", placa: "ISF6455" }),
+        compRow({ nrContrOriginal: "17000", numeroNF: "30000", placa: "AAA0000" }),
+        compRow({ nrContrOriginal: "18000", numeroNF: "40000", placa: "SPN5B89" }),
       ],
     );
 
+    expect(filterRowsByResultsSearch(rows, "1467").map((row) => row.base.contrato_interno)).toEqual(["1467"]);
+    expect(filterRowsByResultsSearch(rows, "16883").map((row) => row.base.contratoCliente)).toEqual(["16883"]);
     expect(filterRowsByResultsSearch(rows, "26384").map((row) => row.base.nota)).toEqual(["26384"]);
     expect(filterRowsByResultsSearch(rows, "isf6455").map((row) => row.base.placa)).toEqual(["ISF6455"]);
+    expect(filterRowsByResultsSearch(rows, "spn5b89").map((row) => row.comp?.placa)).toEqual(["SPN5B89"]);
   });
 });

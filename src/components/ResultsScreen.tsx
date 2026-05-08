@@ -104,8 +104,9 @@ export const filterRowsByResultsSearch = (rows: MatchedRow[], search: string): M
   if (!q) return rows;
 
   return rows.filter((r) => {
+    // Contrato MX é informativo na conferência, mas deve participar da busca textual global.
     const hay =
-      `${situacaoLabel[r.situacao]} ${formatDataEmissao(r.base.data_emissao)} ${r.detalhe} ${r.base.contratoCliente} ${r.base.nota} ${r.base.placa} ${r.comp?.placa ?? ""} ${r.comp?.numeroNF ?? ""} ${r.comp?.nrContrOriginal ?? ""}`.toLowerCase();
+      `${situacaoLabel[r.situacao]} ${formatDataEmissao(r.base.data_emissao)} ${r.detalhe} ${r.base.contrato_interno} ${r.base.contratoCliente} ${r.base.nota} ${r.base.placa} ${r.comp?.placa ?? ""} ${r.comp?.numeroNF ?? ""} ${r.comp?.nrContrOriginal ?? ""}`.toLowerCase();
     return hay.includes(q);
   });
 };
