@@ -34,6 +34,7 @@ export interface BaseRow {
   contratoCliente: string;
   chaveAcesso: string;
   data_emissao: unknown;
+  observacaoNF: string;
   aposDesc: number | null;
   raw: RawRow;
 }
@@ -128,6 +129,8 @@ export function parseBaseWithStats(rows: RawRow[]): ParseBaseResult {
       chaveAcesso: String(getCol(r, ["CHAVE DE ACESSO"]) ?? "").trim(),
       // DATA ROMANEIO é informativa para tela/exportação; não entra na chave, status ou divergências.
       data_emissao: getCol(r, ["DATA ROMANEIO"]),
+      // OBSERVAÇÃO NF é apenas informativa para o drawer; não participa do matching.
+      observacaoNF: String(getCol(r, ["OBSERVAÇÃO NF", "OBSERVACAO NF"]) ?? "").trim(),
       aposDesc: toNumber(getCol(r, ["APOS DESC", "APÓS DESC"])),
       raw: r,
     });
