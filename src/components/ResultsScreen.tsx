@@ -3,12 +3,19 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowUpDown,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Copy,
   Download,
+  FileSearch,
   FileText,
+  FileX,
+  GitCompare,
+  Info,
+  ReceiptText,
   Search,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -38,6 +45,7 @@ interface Props {
 }
 
 type FilterKind = "ALL" | "OK" | "BASE_INVALIDA" | "CONTRATO" | "NOTA" | "DIVERGENCIAS" | "ALERTAS";
+type Tone = "success" | "destructive" | "warning" | "info";
 
 const PAGE_SIZE = 25;
 
@@ -116,18 +124,31 @@ export const sortMatchedRows = (rows: MatchedRow[], sort: SortState | null): Mat
   });
 };
 
-const situacaoBadge = (s: Situacao) => {
-  const map: Record<Situacao, string> = {
-    OK: "bg-success-soft text-success border-success/30",
-    REGISTRO_BASE_INVALIDO: "bg-destructive-soft text-destructive border-destructive/30",
-    CONTRATO_NAO_ENCONTRADO: "bg-destructive-soft text-destructive border-destructive/30",
-    NOTA_NAO_ENCONTRADA: "bg-warning-soft text-warning border-warning/30",
-    NOTA_OUTRO_CONTRATO: "bg-warning-soft text-warning border-warning/30",
-    CONTRATO_OUTRA_NOTA: "bg-warning-soft text-warning border-warning/30",
-    DUPLICIDADE: "bg-info-soft text-info border-info/30",
-  };
-  return map[s];
+const situacaoTone: Record<Situacao, Tone> = {
+  OK: "success",
+  REGISTRO_BASE_INVALIDO: "destructive",
+  CONTRATO_NAO_ENCONTRADO: "destructive",
+  NOTA_NAO_ENCONTRADA: "warning",
+  NOTA_OUTRO_CONTRATO: "info",
+  CONTRATO_OUTRA_NOTA: "info",
+  DUPLICIDADE: "info",
 };
+
+const toneBadgeClass: Record<Tone, string> = {
+  success: "bg-success-soft text-success border-success/30",
+  destructive: "bg-destructive-soft text-destructive border-destructive/30",
+  warning: "bg-warning-soft text-warning border-warning/30",
+  info: "bg-info-soft text-info border-info/30",
+};
+
+const toneBorderLeft: Record<Tone, string> = {
+  success: "before:bg-success/40",
+  destructive: "before:bg-destructive",
+  warning: "before:bg-warning",
+  info: "before:bg-info",
+};
+
+const situacaoBadge = (s: Situacao) => toneBadgeClass[situacaoTone[s]];
 
 export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIgnoradasModalidade, onReset }: Props) => {
   const [filter, setFilter] = useState<FilterKind>("ALL");
@@ -165,6 +186,8 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageRows = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const rangeStart = sorted.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(safePage * PAGE_SIZE, sorted.length);
 
   const toggleSort = (key: SortKey) => {
     setSort((current) =>
@@ -179,11 +202,11 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
   };
 
   const renderSortableHead = (label: string, key: SortKey, className?: string, title?: string) => (
-    <TableHead className={className} title={title}>
+    <TableHead className={cn("h-10 text-[11px] uppercase tracking-wide font-semibold text-muted-foreground", className)} title={title}>
       <button
         type="button"
         className={cn(
-          "inline-flex w-full items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+          "inline-flex w-full items-center gap-1 transition-colors hover:text-foreground",
           className?.includes("text-right") && "justify-end",
         )}
         onClick={() => toggleSort(key)}
@@ -212,35 +235,26 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
       .catch(() => toast({ title: "Não foi possível copiar a chave de acesso.", variant: "destructive" }));
   };
 
+  const selectedTone: Tone | null = selected ? situacaoTone[selected.situacao] : null;
+
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card sticky top-0 z-20">
-        <div className="mx-auto max-w-[1400px] px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={onReset}>
+      <header className="border-b bg-card sticky top-0 z-20 shadow-sm">
+        <div className="mx-auto max-w-[1400px] px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button variant="ghost" size="sm" onClick={onReset} className="gap-1.5">
               <ArrowLeft className="h-4 w-4" />
               Nova conferência
             </Button>
-            <div className="hidden md:flex items-center gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Empresa: </span>
-                <span className="font-medium">{empresa}</span>
-              </div>
-              <div className="h-4 w-px bg-border" />
-              <div>
-                <span className="text-muted-foreground">Cliente: </span>
-                <span className="font-medium">{cliente}</span>
-              </div>
-              <div className="h-4 w-px bg-border" />
-              <div>
-                <span className="text-muted-foreground">Registros analisados: </span>
-                <span className="font-medium">{kpis.total}</span>
-              </div>
+            <div className="hidden md:flex items-center gap-2">
+              <ContextChip label="Empresa" value={empresa} />
+              <ContextChip label="Cliente" value={cliente} />
+              <ContextChip label="Registros" value={kpis.total.toLocaleString("pt-BR")} accent />
             </div>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm">
+              <Button size="sm" className="gap-1.5 shadow-sm">
                 <Download className="h-4 w-4" />
                 Exportar
               </Button>
@@ -255,21 +269,56 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        <div className="md:hidden mx-auto max-w-[1400px] px-6 pb-3 flex items-center gap-2 flex-wrap">
+          <ContextChip label="Empresa" value={empresa} />
+          <ContextChip label="Cliente" value={cliente} />
+          <ContextChip label="Registros" value={kpis.total.toLocaleString("pt-BR")} accent />
+        </div>
       </header>
 
       <main className="mx-auto max-w-[1400px] px-6 py-5 space-y-4">
-        <Card className="p-3 text-sm text-muted-foreground">
-          Arquivo GRL053 importado com {baseTotalArquivo} registros. Registros analisados: {kpis.total}.
-          {baseIgnoradasModalidade > 0 && (
-            <span> Foram ignoradas {baseIgnoradasModalidade} linhas por modalidade diferente de EXP.</span>
-          )}
-        </Card>
+        {/* Resumo da importação */}
+        <div className="flex items-start gap-3 rounded-lg border border-info/20 border-l-4 border-l-info bg-info-soft/40 p-3">
+          <Info className="h-4 w-4 text-info mt-0.5 shrink-0" />
+          <div className="text-sm leading-relaxed">
+            <span className="text-foreground">
+              Arquivo GRL053 importado com{" "}
+              <span className="font-semibold tabular-nums">{baseTotalArquivo.toLocaleString("pt-BR")}</span> registros.
+            </span>{" "}
+            <span className="text-muted-foreground">
+              Analisados:{" "}
+              <span className="font-semibold tabular-nums text-foreground">
+                {kpis.total.toLocaleString("pt-BR")}
+              </span>
+              .
+            </span>
+            {baseIgnoradasModalidade > 0 && (
+              <span className="text-muted-foreground">
+                {" "}
+                Ignoradas{" "}
+                <span className="font-semibold tabular-nums text-warning">
+                  {baseIgnoradasModalidade.toLocaleString("pt-BR")}
+                </span>{" "}
+                linhas por modalidade diferente de EXP.
+              </span>
+            )}
+          </div>
+        </div>
 
+        {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <KpiCard label="Vínculo OK" value={kpis.ok} active={filter === "OK"} tone="success" onClick={() => setFilterAndReset(filter === "OK" ? "ALL" : "OK")} />
+          <KpiCard
+            label="Vínculo OK"
+            value={kpis.ok}
+            icon={CheckCircle2}
+            active={filter === "OK"}
+            tone="success"
+            onClick={() => setFilterAndReset(filter === "OK" ? "ALL" : "OK")}
+          />
           <KpiCard
             label="Base inválida"
             value={kpis.baseInvalida}
+            icon={FileX}
             active={filter === "BASE_INVALIDA"}
             tone="destructive"
             onClick={() => setFilterAndReset(filter === "BASE_INVALIDA" ? "ALL" : "BASE_INVALIDA")}
@@ -277,6 +326,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
           <KpiCard
             label="Contrato não encontrado"
             value={kpis.contratoNaoEncontrado}
+            icon={FileSearch}
             active={filter === "CONTRATO"}
             tone="destructive"
             onClick={() => setFilterAndReset(filter === "CONTRATO" ? "ALL" : "CONTRATO")}
@@ -284,6 +334,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
           <KpiCard
             label="Nota não encontrada"
             value={kpis.notaNaoEncontrada}
+            icon={ReceiptText}
             active={filter === "NOTA"}
             tone="warning"
             onClick={() => setFilterAndReset(filter === "NOTA" ? "ALL" : "NOTA")}
@@ -291,6 +342,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
           <KpiCard
             label="Divergências de vínculo"
             value={kpis.divergencias}
+            icon={GitCompare}
             active={filter === "DIVERGENCIAS"}
             tone="info"
             onClick={() => setFilterAndReset(filter === "DIVERGENCIAS" ? "ALL" : "DIVERGENCIAS")}
@@ -298,15 +350,17 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
           <KpiCard
             label="Alertas (placa)"
             value={kpis.alertas}
+            icon={AlertTriangle}
             active={filter === "ALERTAS"}
             tone="warning"
             onClick={() => setFilterAndReset(filter === "ALERTAS" ? "ALL" : "ALERTAS")}
           />
         </div>
 
-        <Card className="p-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 min-w-[240px]">
+        {/* Tabela com toolbar integrada */}
+        <Card className="overflow-hidden">
+          <div className="flex items-center gap-3 flex-wrap px-4 py-2.5 border-b bg-muted/30">
+            <div className="relative flex-1 min-w-[240px] max-w-xl">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={search}
@@ -315,131 +369,154 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                   setPage(1);
                 }}
                 placeholder="Buscar por contrato, nota ou placa..."
-                className="pl-9"
+                className="pl-9 h-9 bg-card"
               />
             </div>
-            <div className="text-sm text-muted-foreground">
-              {filtered.length} de {rows.length}
+            <div className="ml-auto flex items-center gap-2">
+              {(filter !== "ALL" || search) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => {
+                    setFilter("ALL");
+                    setSearch("");
+                    setPage(1);
+                  }}
+                >
+                  Limpar filtros
+                </Button>
+              )}
+              <span className="text-xs font-medium text-muted-foreground tabular-nums px-2.5 py-1 rounded-md bg-card border">
+                {filtered.length.toLocaleString("pt-BR")} de {rows.length.toLocaleString("pt-BR")}
+              </span>
             </div>
-            {(filter !== "ALL" || search) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setFilter("ALL");
-                  setSearch("");
-                  setPage(1);
-                }}
-              >
-                Limpar filtros
-              </Button>
-            )}
           </div>
-        </Card>
 
-        <Card className="overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/40">
-                {renderSortableHead("Situação", "situacao", "w-[180px]")}
-                {renderSortableHead("Data emissão", "data_emissao", undefined, "Data emissão vinda da DATA ROMANEIO do GRL053")}
-                {renderSortableHead("Contr. Cliente", "contratoCliente")}
-                {renderSortableHead("Nota", "nota")}
-                {renderSortableHead("Placa Base", "placaBase")}
-                {renderSortableHead("Placa Cliente", "placaCliente")}
-                {renderSortableHead("Peso Fiscal", "pesoFiscal", "text-right")}
-                {renderSortableHead("Peso Físico", "pesoFisico", "text-right")}
-                <TableHead>Detalhe</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pageRows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
-                    Nenhum registro com os filtros atuais.
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40 hover:bg-muted/40 border-b">
+                  {renderSortableHead("Situação", "situacao", "w-[180px]")}
+                  {renderSortableHead("Data emissão", "data_emissao", undefined, "Data emissão vinda da DATA ROMANEIO do GRL053")}
+                  {renderSortableHead("Contr. Cliente", "contratoCliente")}
+                  {renderSortableHead("Nota", "nota")}
+                  {renderSortableHead("Placa Base", "placaBase")}
+                  {renderSortableHead("Placa Cliente", "placaCliente")}
+                  {renderSortableHead("Peso Fiscal", "pesoFiscal", "text-right")}
+                  {renderSortableHead("Peso Físico", "pesoFisico", "text-right")}
+                  <TableHead className="h-10 text-[11px] uppercase tracking-wide font-semibold text-muted-foreground">
+                    Detalhe
+                  </TableHead>
                 </TableRow>
-              ) : (
-                pageRows.map((r) => (
-                  <TableRow
-                    key={r.id}
-                    className="cursor-pointer"
-                    onClick={() => setSelected(r)}
-                  >
-                    <TableCell>
-                      <Badge variant="outline" className={cn("font-medium", situacaoBadge(r.situacao))}>
-                        {situacaoLabel[r.situacao]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs tabular-nums">{formatDataEmissao(r.base.data_emissao)}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.base.contratoCliente || "—"}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.base.nota || "—"}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.base.placa || "—"}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      <span className="inline-flex items-center gap-1">
-                        {r.comp?.placa || "—"}
-                        {r.placaDivergente && (
-                          <AlertTriangle className="h-3.5 w-3.5 text-warning" aria-label="Placa divergente" />
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{fmtNum(r.base.aposDesc)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{fmtNum(r.comp?.totalLiquido ?? null)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">
-                      {r.detalhe}
+              </TableHeader>
+              <TableBody>
+                {pageRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                      Nenhum registro com os filtros atuais.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  pageRows.map((r) => {
+                    const tone = situacaoTone[r.situacao];
+                    return (
+                      <TableRow
+                        key={r.id}
+                        className={cn(
+                          "cursor-pointer transition-colors hover:bg-accent/40 relative",
+                          "before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px]",
+                          tone === "success" ? "before:bg-transparent" : toneBorderLeft[tone],
+                        )}
+                        onClick={() => setSelected(r)}
+                      >
+                        <TableCell>
+                          <Badge variant="outline" className={cn("font-medium rounded-full px-2.5", situacaoBadge(r.situacao))}>
+                            {situacaoLabel[r.situacao]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs tabular-nums text-muted-foreground">
+                          {formatDataEmissao(r.base.data_emissao)}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{r.base.contratoCliente || "—"}</TableCell>
+                        <TableCell className="font-mono text-xs">{r.base.nota || "—"}</TableCell>
+                        <TableCell className="font-mono text-xs">{r.base.placa || "—"}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          <span className="inline-flex items-center gap-1">
+                            {r.comp?.placa || "—"}
+                            {r.placaDivergente && (
+                              <AlertTriangle className="h-3.5 w-3.5 text-warning" aria-label="Placa divergente" />
+                            )}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-sm">{fmtNum(r.base.aposDesc)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-sm">{fmtNum(r.comp?.totalLiquido ?? null)}</TableCell>
+                        <TableCell
+                          className="text-xs text-muted-foreground max-w-[300px] truncate"
+                          title={r.detalhe}
+                        >
+                          {r.detalhe}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
-          {sorted.length > PAGE_SIZE && (
-            <div className="flex items-center justify-between px-4 py-3 border-t text-sm">
-              <div className="text-muted-foreground">
-                Página {safePage} de {totalPages}
+          {sorted.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t text-sm bg-muted/20">
+              <div className="text-muted-foreground tabular-nums">
+                Mostrando <span className="font-medium text-foreground">{rangeStart}</span>–
+                <span className="font-medium text-foreground">{rangeEnd}</span> de{" "}
+                <span className="font-medium text-foreground">{sorted.length.toLocaleString("pt-BR")}</span>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled={safePage === 1} onClick={() => setPage(safePage - 1)}>
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={safePage === totalPages}
-                  onClick={() => setPage(safePage + 1)}
-                >
-                  Próxima
-                </Button>
-              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    Página {safePage} de {totalPages}
+                  </span>
+                  <Button variant="outline" size="sm" disabled={safePage === 1} onClick={() => setPage(safePage - 1)}>
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={safePage === totalPages}
+                    onClick={() => setPage(safePage + 1)}
+                  >
+                    Próxima
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </Card>
       </main>
 
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent className="sm:max-w-md w-full overflow-y-auto">
-          {selected && (
+        <SheetContent className="sm:max-w-lg w-full overflow-y-auto">
+          {selected && selectedTone && (
             <>
               <SheetHeader>
                 <SheetTitle>Detalhe do registro</SheetTitle>
-                <SheetDescription>
-                  <Badge variant="outline" className={cn("mt-2", situacaoBadge(selected.situacao))}>
-                    {situacaoLabel[selected.situacao]}
-                  </Badge>
+                <SheetDescription asChild>
+                  <div className="mt-2">
+                    <Badge variant="outline" className={cn("rounded-full px-3 py-1 font-medium", situacaoBadge(selected.situacao))}>
+                      {situacaoLabel[selected.situacao]}
+                    </Badge>
+                  </div>
                 </SheetDescription>
               </SheetHeader>
 
-              <div className="mt-6 space-y-5 text-sm">
-                <section>
-                  <h4 className="font-semibold text-xs uppercase text-muted-foreground mb-2">Diagnóstico</h4>
-                  <p className="bg-muted/50 rounded-md p-3">{selected.detalhe}</p>
-                </section>
+              <div className="mt-6 space-y-4 text-sm">
+                <SectionCard title="Diagnóstico" tone={selectedTone}>
+                  <p className="text-sm leading-relaxed">{selected.detalhe}</p>
+                </SectionCard>
 
-                <section>
-                  <h4 className="font-semibold text-xs uppercase text-muted-foreground mb-2">Comparação principal</h4>
+                <SectionCard title="Comparação principal">
                   <div className="space-y-2">
-                    {/* Comparação visual: estes cards apenas explicam os pares usados na conferência, sem alterar o matching. */}
                     <ComparisonRow
                       label="Contrato"
                       baseLabel="Base GRL053 · Contr. Cliente"
@@ -466,18 +543,17 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                       note="Apenas alerta informativo; placa não afeta a classificação."
                     />
                   </div>
-                </section>
+                </SectionCard>
 
-                <section>
-                  <h4 className="font-semibold text-xs uppercase text-muted-foreground mb-2">Informações complementares</h4>
+                <SectionCard title="Informações complementares">
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
                     <Field label="Contrato (base)" value={selected.base.contrato} />
                     <Field label="Data emissão" value={formatDataEmissao(selected.base.data_emissao)} />
                     <Field label="Após Desc (peso fiscal)" value={fmtNum(selected.base.aposDesc)} />
                     <Field label="Total Líquido (peso físico)" value={fmtNum(selected.comp?.totalLiquido ?? null)} />
                     <div className="col-span-2">
-                      <dt className="text-xs text-muted-foreground">Chave de acesso (GRL053)</dt>
-                      <dd className="font-mono text-xs mt-0.5 flex items-center gap-2 break-all">
+                      <dt className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Chave de acesso (GRL053)</dt>
+                      <dd className="font-mono text-xs mt-1 flex items-center gap-2 break-all">
                         <span>{selected.base.chaveAcesso || "—"}</span>
                         {selected.base.chaveAcesso && (
                           <Button
@@ -495,7 +571,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                       </dd>
                     </div>
                   </dl>
-                </section>
+                </SectionCard>
 
                 {!selected.comp && (
                   <p className="text-xs text-muted-foreground italic">
@@ -504,8 +580,8 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                 )}
 
                 {selected.placaDivergente && (
-                  <div className="flex items-start gap-2 rounded-md bg-warning-soft text-warning p-3">
-                    <AlertTriangle className="h-4 w-4 mt-0.5" />
+                  <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning-soft text-warning p-3">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                     <span className="text-xs">
                       Placas diferentes entre base e complementar — apenas alerta informativo, não afeta a classificação.
                     </span>
@@ -517,6 +593,41 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
         </SheetContent>
       </Sheet>
     </div>
+  );
+};
+
+const ContextChip = ({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) => (
+  <div
+    className={cn(
+      "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs",
+      accent ? "bg-primary-soft border-primary/20" : "bg-muted/60 border-border",
+    )}
+  >
+    <span className="uppercase tracking-wide text-[10px] font-semibold text-muted-foreground">{label}</span>
+    <span className={cn("font-semibold", accent ? "text-primary" : "text-foreground")}>{value}</span>
+  </div>
+);
+
+const SectionCard = ({
+  title,
+  tone,
+  children,
+}: {
+  title: string;
+  tone?: Tone;
+  children: React.ReactNode;
+}) => {
+  const toneRing: Record<Tone, string> = {
+    success: "border-success/30 bg-success-soft/30",
+    destructive: "border-destructive/30 bg-destructive-soft/30",
+    warning: "border-warning/30 bg-warning-soft/30",
+    info: "border-info/30 bg-info-soft/30",
+  };
+  return (
+    <section className={cn("rounded-lg border p-3", tone ? toneRing[tone] : "bg-muted/30 border-border")}>
+      <h4 className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground mb-2">{title}</h4>
+      {children}
+    </section>
   );
 };
 
@@ -534,7 +645,6 @@ interface ComparisonRowProps {
 
 const ComparisonRow = ({ label, baseLabel, baseValue, compLabel, compValue, severity, note }: ComparisonRowProps) => {
   const hasCompValue = !!compValue;
-  // Comparação estritamente visual entre os valores já normalizados pelo fluxo existente; não participa do matching.
   const isSame = hasCompValue && baseValue === compValue;
   const tone = getComparisonTone(hasCompValue, isSame, severity);
 
@@ -545,7 +655,7 @@ const ComparisonRow = ({ label, baseLabel, baseValue, compLabel, compValue, seve
           <div className="font-medium text-sm">{label}</div>
           {note && <p className="text-[11px] text-muted-foreground mt-0.5">{note}</p>}
         </div>
-        <Badge variant="outline" className={cn("shrink-0", tone.badge)}>
+        <Badge variant="outline" className={cn("shrink-0 rounded-full", tone.badge)}>
           {tone.label}
         </Badge>
       </div>
@@ -558,8 +668,8 @@ const ComparisonRow = ({ label, baseLabel, baseValue, compLabel, compValue, seve
 };
 
 const ComparisonValue = ({ label, value }: { label: string; value?: string }) => (
-  <div className="rounded-md bg-background/70 border border-border/60 p-2 min-w-0">
-    <div className="text-[11px] text-muted-foreground leading-tight">{label}</div>
+  <div className="rounded-md bg-card border border-border/60 p-2 min-w-0">
+    <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight font-medium">{label}</div>
     <div className="font-mono text-xs mt-1 truncate" title={value || "—"}>
       {value || "—"}
     </div>
@@ -578,31 +688,30 @@ const getComparisonTone = (hasCompValue: boolean, isSame: boolean, severity: Com
   if (isSame) {
     return {
       label: "Iguais",
-      card: "bg-success-soft/50 border-success/30",
+      card: "bg-success-soft/40 border-success/30",
       badge: "bg-success-soft text-success border-success/30",
     };
   }
 
-  // Divergência de placa tem tom de alerta porque é informativa; divergências de contrato/nota são chave visual.
   if (severity === "info") {
     return {
       label: "Alerta",
-      card: "bg-warning-soft/60 border-warning/30",
+      card: "bg-warning-soft/50 border-warning/30",
       badge: "bg-warning-soft text-warning border-warning/30",
     };
   }
 
   return {
     label: "Diferentes",
-    card: "bg-destructive-soft/50 border-destructive/30",
+    card: "bg-destructive-soft/40 border-destructive/30",
     badge: "bg-destructive-soft text-destructive border-destructive/30",
   };
 };
 
 const Field = ({ label, value }: { label: string; value: string }) => (
   <div>
-    <dt className="text-xs text-muted-foreground">{label}</dt>
-    <dd className="font-mono text-xs mt-0.5">{value || "—"}</dd>
+    <dt className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">{label}</dt>
+    <dd className="font-mono text-xs mt-1">{value || "—"}</dd>
   </div>
 );
 
@@ -610,36 +719,52 @@ interface KpiProps {
   label: string;
   value: number;
   active: boolean;
-  tone: "success" | "destructive" | "warning" | "info";
+  tone: Tone;
+  icon: LucideIcon;
   onClick: () => void;
 }
 
-const KpiCard = ({ label, value, active, tone, onClick }: KpiProps) => {
-  const toneMap = {
-    success: "border-success/30 [&[data-active=true]]:bg-success-soft [&[data-active=true]]:border-success",
-    destructive:
-      "border-destructive/30 [&[data-active=true]]:bg-destructive-soft [&[data-active=true]]:border-destructive",
-    warning: "border-warning/30 [&[data-active=true]]:bg-warning-soft [&[data-active=true]]:border-warning",
-    info: "border-info/30 [&[data-active=true]]:bg-info-soft [&[data-active=true]]:border-info",
+const KpiCard = ({ label, value, active, tone, icon: Icon, onClick }: KpiProps) => {
+  const ring: Record<Tone, string> = {
+    success: "data-[active=true]:ring-success/50 data-[active=true]:border-success/40",
+    destructive: "data-[active=true]:ring-destructive/50 data-[active=true]:border-destructive/40",
+    warning: "data-[active=true]:ring-warning/50 data-[active=true]:border-warning/40",
+    info: "data-[active=true]:ring-info/50 data-[active=true]:border-info/40",
   };
-  const valueColor = {
+  const iconBg: Record<Tone, string> = {
+    success: "bg-success-soft text-success",
+    destructive: "bg-destructive-soft text-destructive",
+    warning: "bg-warning-soft text-warning",
+    info: "bg-info-soft text-info",
+  };
+  const valueColor: Record<Tone, string> = {
     success: "text-success",
     destructive: "text-destructive",
     warning: "text-warning",
     info: "text-info",
   };
+
   return (
     <button
       data-active={active}
       onClick={onClick}
       className={cn(
-        "rounded-lg border bg-card p-4 text-left transition-all hover:shadow-md",
-        toneMap[tone],
-        active && "shadow-md",
+        "group rounded-xl border bg-card p-3.5 text-left transition-all hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "data-[active=true]:ring-2 data-[active=true]:shadow-md",
+        ring[tone],
       )}
     >
-      <div className="text-xs text-muted-foreground font-medium">{label}</div>
-      <div className={cn("text-2xl font-semibold mt-1 tabular-nums", valueColor[tone])}>{value}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0", iconBg[tone])}>
+          <Icon className="h-4.5 w-4.5" strokeWidth={2.25} />
+        </div>
+        <div className={cn("text-2xl font-semibold tabular-nums leading-none", valueColor[tone])}>
+          {value.toLocaleString("pt-BR")}
+        </div>
+      </div>
+      <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold mt-3 leading-tight">
+        {label}
+      </div>
     </button>
   );
 };
