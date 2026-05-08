@@ -23,7 +23,7 @@ interface Props {
   onReset: () => void;
 }
 
-type FilterKind = "ALL" | "OK" | "CONTRATO" | "NOTA" | "DIVERGENCIAS" | "ALERTAS";
+type FilterKind = "ALL" | "OK" | "BASE_INVALIDA" | "CONTRATO" | "NOTA" | "DIVERGENCIAS" | "ALERTAS";
 
 const PAGE_SIZE = 25;
 
@@ -33,6 +33,7 @@ const fmtNum = (n: number | null) =>
 const situacaoBadge = (s: Situacao) => {
   const map: Record<Situacao, string> = {
     OK: "bg-success-soft text-success border-success/30",
+    REGISTRO_BASE_INVALIDO: "bg-destructive-soft text-destructive border-destructive/30",
     CONTRATO_NAO_ENCONTRADO: "bg-destructive-soft text-destructive border-destructive/30",
     NOTA_NAO_ENCONTRADA: "bg-warning-soft text-warning border-warning/30",
     NOTA_OUTRO_CONTRATO: "bg-warning-soft text-warning border-warning/30",
@@ -54,6 +55,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, onReset }: Props) => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (filter === "OK" && r.situacao !== "OK") return false;
+      if (filter === "BASE_INVALIDA" && r.situacao !== "REGISTRO_BASE_INVALIDO") return false;
       if (filter === "CONTRATO" && r.situacao !== "CONTRATO_NAO_ENCONTRADO") return false;
       if (filter === "NOTA" && r.situacao !== "NOTA_NAO_ENCONTRADA") return false;
       if (
@@ -64,7 +66,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, onReset }: Props) => {
       if (filter === "ALERTAS" && !r.placaDivergente) return false;
       if (q) {
         const hay =
-          `${r.base.contratoCliente} ${r.base.nota} ${r.base.placa} ${r.comp?.placa ?? ""} ${r.comp?.numeroNF ?? ""} ${r.comp?.nrContrOriginal ?? ""}`.toLowerCase();
+          `${situacaoLabel[r.situacao]} ${r.detalhe} ${r.base.contratoCliente} ${r.base.nota} ${r.base.placa} ${r.comp?.placa ?? ""} ${r.comp?.numeroNF ?? ""} ${r.comp?.nrContrOriginal ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -126,8 +128,15 @@ export const ResultsScreen = ({ empresa, cliente, rows, onReset }: Props) => {
       </header>
 
       <main className="mx-auto max-w-[1400px] px-6 py-5 space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <KpiCard label="Vínculo OK" value={kpis.ok} active={filter === "OK"} tone="success" onClick={() => setFilterAndReset(filter === "OK" ? "ALL" : "OK")} />
+          <KpiCard
+            label="Base inválida"
+            value={kpis.baseInvalida}
+            active={filter === "BASE_INVALIDA"}
+            tone="destructive"
+            onClick={() => setFilterAndReset(filter === "BASE_INVALIDA" ? "ALL" : "BASE_INVALIDA")}
+          />
           <KpiCard
             label="Contrato não encontrado"
             value={kpis.contratoNaoEncontrado}
