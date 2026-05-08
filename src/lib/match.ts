@@ -1,3 +1,4 @@
+import type { ClienteComplementarId } from "./layouts";
 import { getCol, RawRow } from "./parseXlsx";
 import {
   key,
@@ -158,7 +159,21 @@ export function parseBase(rows: RawRow[]): BaseRow[] {
   return parseBaseWithStats(rows).base;
 }
 
-export function parseComp(rows: RawRow[]): CompRow[] {
+export function parseComp(
+  rows: RawRow[],
+  clienteId: ClienteComplementarId = "inpasa",
+): CompRow[] {
+  if (clienteId === "fs") {
+    return rows.map((r) => ({
+      // Layout FS fixo: Pedido + Nº Nota Fiscal formam a chave; placa e peso são informativos.
+      placa: normalizePlaca(getCol(r, ["Placa Caminhão"])),
+      numeroNF: normalizeNota(getCol(r, ["Nº Nota Fiscal"])),
+      nrContrOriginal: normalizeContrato(getCol(r, ["Pedido"])),
+      totalLiquido: toNumber(getCol(r, ["Peso Líquido"])),
+      raw: r,
+    }));
+  }
+
   return rows.map((r) => ({
     placa: normalizePlaca(getCol(r, ["Placa"])),
     numeroNF: normalizeNota(

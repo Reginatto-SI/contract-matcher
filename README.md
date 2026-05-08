@@ -4,7 +4,7 @@
 
 Contract Matcher é uma ferramenta interna para conferência operacional de contratos entre a cooperativa e seus clientes.
 
-O objetivo é validar se aquilo que a cooperativa faturou no relatório base **GRL053** está refletido corretamente no relatório complementar do cliente, começando pela Inpasa na V1.
+O objetivo é validar se aquilo que a cooperativa faturou no relatório base **GRL053** está refletido corretamente no relatório complementar do cliente, começando pela Inpasa na V1 e incluindo o layout complementar FS.
 
 A pergunta que o sistema responde é:
 
@@ -28,7 +28,7 @@ Importar Base
 
 1. O usuário importa o relatório base GRL053; a empresa/cooperativa pode ser identificada automaticamente pela coluna informativa `EMPRESA` e continua editável.
 2. O importador do GRL053 considera somente linhas com `MOD = EXP`; demais modalidades são ignoradas antes do matching.
-3. O usuário importa o relatório complementar e seleciona o cliente em uma lista fixa de layouts suportados; na V1, apenas `Inpasa` está disponível e pré-selecionado.
+3. O usuário importa o relatório complementar e seleciona o cliente em uma lista fixa de layouts suportados; a lista fixa suporta `Inpasa` e `FS`, com `Inpasa` pré-selecionado.
 4. O sistema normaliza os campos necessários e cruza os registros analisados em memória.
 5. A tela de conferência exibe status, detalhe, filtros, KPIs e dados informativos.
 6. O usuário exporta o resultado para Excel/PDF.
@@ -40,7 +40,7 @@ Importar Base
 A V1 suporta apenas os layouts fixos documentados nos PRDs:
 
 - Relatório Base — GRL053, em `.xlsx` ou `.xls`, com coluna obrigatória `MOD` para filtrar apenas expedições (`EXP`).
-- Relatório Complementar — Inpasa, em `.xlsx` ou `.xls`, selecionado por lista fixa de clientes/layouts suportados.
+- Relatório Complementar — Inpasa ou FS, em `.xlsx` ou `.xls`, selecionado por lista fixa de clientes/layouts suportados.
 
 A importação é determinística: não existe DE/PARA, configuração de colunas, cadastro de clientes, fuzzy match ou tentativa inteligente de localizar layouts alternativos. Se a estrutura não bater com o layout esperado, o sistema deve bloquear a importação e informar quais colunas não foram encontradas, incluindo a aba e a linha de cabeçalho validadas quando possível.
 
@@ -56,6 +56,9 @@ CONTR. CLIENTE + NOTA
 
 Complementar Inpasa:
 Nr Contr Original + Número NF
+
+Complementar FS:
+Pedido + Nº Nota Fiscal
 ```
 
 Regras obrigatórias:
@@ -162,7 +165,7 @@ Estas decisões devem ser preservadas para evitar regressões futuras:
 - Sem IA.
 - Sem heurística.
 - Sem DE/PARA.
-- Sem múltiplos layouts.
+- Sem cadastro dinâmico ou DE/PARA de layouts; apenas layouts fixos homologados.
 - Sem persistência.
 - Sem backend.
 - Sem banco de dados.
@@ -170,7 +173,7 @@ Estas decisões devem ser preservadas para evitar regressões futuras:
 - Sem auto correção de dados.
 - Layout fixo e determinístico.
 - GRL053 filtrado por `MOD = EXP` antes do matching.
-- Cliente complementar escolhido por lista fixa de layouts; na V1, apenas Inpasa.
+- Cliente complementar escolhido por lista fixa de layouts: Inpasa e FS.
 - `EMPRESA` do GRL053 é usada apenas para contexto visual da análise, não para matching.
 
 ---

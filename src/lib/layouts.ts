@@ -1,3 +1,5 @@
+export type ClienteComplementarId = "inpasa" | "fs";
+
 export interface FixedLayoutConfig {
   id: string;
   label: string;
@@ -20,7 +22,9 @@ export const GRL053_LAYOUT: FixedLayoutConfig = {
 };
 
 // Lista fixa da V1. Novos clientes devem entrar aqui somente quando o layout complementar fixo for homologado.
-export const CLIENTES_SUPORTADOS: FixedLayoutConfig[] = [
+export const CLIENTES_SUPORTADOS: Array<
+  FixedLayoutConfig & { id: ClienteComplementarId }
+> = [
   {
     id: "inpasa",
     label: "Inpasa",
@@ -32,11 +36,26 @@ export const CLIENTES_SUPORTADOS: FixedLayoutConfig[] = [
     ],
     headerRow: 2,
   },
+  {
+    id: "fs",
+    label: "FS",
+    // Layout complementar FS real: cabeçalho na linha 1; Pedido e Nº Nota Fiscal são os únicos campos de vínculo.
+    // Placa Caminhão e Peso Líquido são importados apenas como informação visual.
+    requiredColumns: [
+      "Placa Caminhão",
+      "Nº Nota Fiscal",
+      "Peso Líquido",
+      "Pedido",
+    ],
+    headerRow: 1,
+  },
 ];
 
 export const DEFAULT_CLIENTE_ID = "inpasa";
 
-export function getClienteSuportado(id: string): FixedLayoutConfig {
+export function getClienteSuportado(
+  id: string,
+): FixedLayoutConfig & { id: ClienteComplementarId } {
   const fallback = CLIENTES_SUPORTADOS[0];
   if (!fallback) {
     throw new Error("Nenhum cliente suportado configurado.");
