@@ -29,6 +29,7 @@ export const situacaoLabel: Record<Situacao, string> = {
 export interface BaseRow {
   placa: string;
   contrato: string;
+  contrato_interno: string;
   modalidade: string;
   nota: string;
   contratoCliente: string;
@@ -69,6 +70,12 @@ export function normalizeModalidade(value: unknown): string {
   return String(value ?? "")
     .trim()
     .toUpperCase();
+}
+
+function cleanInformativeText(value: unknown): string {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export interface EmpresaDetectionResult {
@@ -115,9 +122,13 @@ export function parseBaseWithStats(rows: RawRow[]): ParseBaseResult {
       return;
     }
 
+    const contratoOriginal = getCol(r, ["CONTRATO"]);
+
     base.push({
       placa: normalizePlaca(getCol(r, ["PLACA"])),
-      contrato: normalizeContrato(getCol(r, ["CONTRATO"])),
+      contrato: normalizeContrato(contratoOriginal),
+      // Campo informativo do GRL053 (CONTRATO/Contrato MX); preserva letras/traços e não participa do matching.
+      contrato_interno: cleanInformativeText(contratoOriginal),
       modalidade,
       // No layout GRL053 da V1, a nota fiscal usada no matching vem da primeira coluna "NOTA" (coluna M).
       // Quando há duplicidade de cabeçalho, o SheetJS mantém a primeira ocorrência como "NOTA" e sufixa as demais.

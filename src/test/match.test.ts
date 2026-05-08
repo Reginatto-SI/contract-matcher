@@ -19,6 +19,7 @@ import {
 const baseRow = (overrides: Partial<BaseRow> = {}): BaseRow => ({
   placa: "ABC1234",
   contrato: "10",
+  contrato_interno: "10",
   modalidade: "EXP",
   contratoCliente: "123",
   nota: "456",
@@ -93,6 +94,23 @@ describe("parseBase", () => {
     expect(result.ignoradasModalidade).toBe(2);
     expect(result.base).toHaveLength(1);
     expect(result.base[0].modalidade).toBe("EXP");
+  });
+
+  it("captura CONTRATO como contrato_interno informativo do GRL053 preservando letras e traços", () => {
+    const [row] = parseBase([
+      {
+        PLACA: "ABC1234",
+        CONTRATO: "  MX-10   Safra 2025  ",
+        MOD: "EXP",
+        NOTA: "456",
+        "CONTR. CLIENTE": "123",
+        "APOS DESC": 100,
+      },
+    ]);
+
+    expect(row.contrato_interno).toBe("MX-10 Safra 2025");
+    expect(row.contrato).toBe("10");
+    expect(row.contratoCliente).toBe("123");
   });
 
   it("captura DATA ROMANEIO como data_emissao informativa do GRL053", () => {
@@ -311,6 +329,17 @@ describe("match", () => {
     expect(kpis.ok).toBe(1);
     expect(kpis.contratoNaoEncontrado).toBe(1);
   });
+
+  it("não usa Contrato MX para matching nem altera KPIs", () => {
+    const base = [baseRow({ contrato_interno: "MX-999", contratoCliente: "123", nota: "456" })];
+    const complementar = [compRow({ nrContrOriginal: "123", numeroNF: "456" })];
+
+    const [row] = match(base, complementar);
+    const kpis = computeKpis([row]);
+
+    expect(row.situacao).toBe("OK");
+    expect(kpis).toMatchObject({ total: 1, ok: 1 });
+  });
 });
 
 describe("data emissão", () => {
@@ -362,6 +391,32 @@ describe("sortMatchedRows", () => {
     );
 
     expect(sorted.map((row) => row.base.nota)).toEqual(["999", "1000", "1001"]);
+  });
+
+  it("ordena Contrato MX preservado sem usar na regra de matching", () => {
+    const rows = [
+      {
+        ...match(
+          [baseRow({ contrato: "20", contrato_interno: "MX-20", nota: "1" })],
+          [compRow({ numeroNF: "1" })],
+        )[0],
+        id: 1,
+      },
+      {
+        ...match(
+          [baseRow({ contrato: "3", contrato_interno: "MX-3", nota: "2" })],
+          [compRow({ numeroNF: "2" })],
+        )[0],
+        id: 2,
+      },
+    ];
+
+    expect(
+      sortMatchedRows(rows, { key: "contratoInterno", direction: "asc" }).map(
+        (row) => row.base.contrato_interno,
+      ),
+    ).toEqual(["MX-3", "MX-20"]);
+    expect(rows.map((row) => row.situacao)).toEqual(["OK", "OK"]);
   });
 
   it("ordena peso numericamente e mantém vazios ao final em ordem decrescente", () => {
