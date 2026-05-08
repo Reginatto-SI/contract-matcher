@@ -9,7 +9,7 @@ import {
 } from "@/lib/match";
 import type { BaseRow, CompRow } from "@/lib/match";
 import { dataEmissaoToTime, formatDataEmissao } from "@/lib/normalize";
-import { sortMatchedRows } from "@/components/ResultsScreen";
+import { filterRowsByResultsSearch, sortMatchedRows } from "@/components/ResultsScreen";
 import {
   CLIENTES_SUPORTADOS,
   DEFAULT_CLIENTE_ID,
@@ -455,5 +455,46 @@ describe("sortMatchedRows", () => {
         (row) => row.situacao,
       ),
     ).toEqual(["OK"]);
+  });
+});
+
+describe("KPIs filtrados da conferência", () => {
+  it("recalcula KPIs sobre a mesma busca textual usada pela grid", () => {
+    const rows = match(
+      [
+        baseRow({ contratoCliente: "16883", nota: "26384", placa: "MPQ9A17" }),
+        baseRow({ contratoCliente: "16883", nota: "26385", placa: "ISF6455" }),
+        baseRow({ contratoCliente: "99999", nota: "77777", placa: "ZZZ9999" }),
+      ],
+      [
+        compRow({ nrContrOriginal: "16883", numeroNF: "26384", placa: "QBG4784" }),
+        compRow({ nrContrOriginal: "16883", numeroNF: "26385", placa: "ISF6455" }),
+      ],
+    );
+
+    const searchedRows = filterRowsByResultsSearch(rows, "16883");
+    const kpis = computeKpis(searchedRows);
+
+    expect(searchedRows).toHaveLength(2);
+    expect(kpis.total).toBe(2);
+    expect(kpis.ok).toBe(2);
+    expect(kpis.contratoNaoEncontrado).toBe(0);
+    expect(kpis.alertas).toBe(1);
+  });
+
+  it("busca textual encontra registros por nota e por placa", () => {
+    const rows = match(
+      [
+        baseRow({ contratoCliente: "16883", nota: "26384", placa: "MPQ9A17" }),
+        baseRow({ contratoCliente: "17000", nota: "30000", placa: "ISF6455" }),
+      ],
+      [
+        compRow({ nrContrOriginal: "16883", numeroNF: "26384", placa: "QBG4784" }),
+        compRow({ nrContrOriginal: "17000", numeroNF: "30000", placa: "ISF6455" }),
+      ],
+    );
+
+    expect(filterRowsByResultsSearch(rows, "26384").map((row) => row.base.nota)).toEqual(["26384"]);
+    expect(filterRowsByResultsSearch(rows, "isf6455").map((row) => row.base.placa)).toEqual(["ISF6455"]);
   });
 });

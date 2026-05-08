@@ -98,6 +98,17 @@ const compareWithNullLast = (a: number | string | null, b: number | string | nul
   return direction === "asc" ? base : -base;
 };
 
+export const filterRowsByResultsSearch = (rows: MatchedRow[], search: string): MatchedRow[] => {
+  const q = search.trim().toLowerCase();
+  if (!q) return rows;
+
+  return rows.filter((r) => {
+    const hay =
+      `${situacaoLabel[r.situacao]} ${formatDataEmissao(r.base.data_emissao)} ${r.detalhe} ${r.base.contratoCliente} ${r.base.nota} ${r.base.placa} ${r.comp?.placa ?? ""} ${r.comp?.numeroNF ?? ""} ${r.comp?.nrContrOriginal ?? ""}`.toLowerCase();
+    return hay.includes(q);
+  });
+};
+
 export const sortMatchedRows = (rows: MatchedRow[], sort: SortState | null): MatchedRow[] => {
   if (!sort) return rows;
 
@@ -168,11 +179,20 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
   const [selected, setSelected] = useState<MatchedRow | null>(null);
   const [sort, setSort] = useState<SortState | null>(null);
 
-  const kpis = useMemo(() => computeKpis(rows), [rows]);
+  // Total bruto/analisado: `rows` é o resultado completo do matching e continua alimentando cabeçalho e contador geral.
+  const totalAnalisado = rows.length;
+
+  const searchedRows = useMemo(() => {
+    // Lista filtrada pela busca textual: esta é a base operacional dos KPIs para refletir contrato, nota ou placa pesquisados.
+    return filterRowsByResultsSearch(rows, search);
+  }, [rows, search]);
+
+  // KPIs filtrados: recalculados sobre a mesma busca textual da grid, sem alterar o total bruto/importado.
+  const kpis = useMemo(() => computeKpis(searchedRows), [searchedRows]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return rows.filter((r) => {
+    // Lista final da grid: aplica o filtro clicável de KPI sobre os registros já reduzidos pela busca textual.
+    return searchedRows.filter((r) => {
       if (filter === "OK" && r.situacao !== "OK") return false;
       if (filter === "BASE_INVALIDA" && r.situacao !== "REGISTRO_BASE_INVALIDO") return false;
       if (filter === "CONTRATO" && r.situacao !== "CONTRATO_NAO_ENCONTRADO") return false;
@@ -183,14 +203,9 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
       )
         return false;
       if (filter === "ALERTAS" && !r.placaDivergente) return false;
-      if (q) {
-        const hay =
-          `${situacaoLabel[r.situacao]} ${formatDataEmissao(r.base.data_emissao)} ${r.detalhe} ${r.base.contratoCliente} ${r.base.nota} ${r.base.placa} ${r.comp?.placa ?? ""} ${r.comp?.numeroNF ?? ""} ${r.comp?.nrContrOriginal ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
       return true;
     });
-  }, [rows, filter, search]);
+  }, [searchedRows, filter]);
 
   const sorted = useMemo(() => sortMatchedRows(filtered, sort), [filtered, sort]);
 
@@ -260,7 +275,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
             <div className="hidden md:flex items-center gap-2">
               <ContextChip label="Empresa" value={empresa} />
               <ContextChip label="Cliente" value={cliente} />
-              <ContextChip label="Registros" value={kpis.total.toLocaleString("pt-BR")} accent />
+              <ContextChip label="Registros" value={totalAnalisado.toLocaleString("pt-BR")} accent />
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -321,7 +336,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
         <div className="md:hidden mx-auto max-w-[1400px] px-6 pb-3 flex items-center gap-2 flex-wrap">
           <ContextChip label="Empresa" value={empresa} />
           <ContextChip label="Cliente" value={cliente} />
-          <ContextChip label="Registros" value={kpis.total.toLocaleString("pt-BR")} accent />
+          <ContextChip label="Registros" value={totalAnalisado.toLocaleString("pt-BR")} accent />
         </div>
       </header>
 
@@ -337,7 +352,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
             <span className="text-muted-foreground">
               Analisados:{" "}
               <span className="font-semibold tabular-nums text-foreground">
-                {kpis.total.toLocaleString("pt-BR")}
+                {totalAnalisado.toLocaleString("pt-BR")}
               </span>
               .
             </span>
