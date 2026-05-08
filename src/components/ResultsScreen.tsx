@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, Download, FileText, Search, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Download, FileText, Search, AlertTriangle, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { computeKpis, MatchedRow, Situacao, situacaoLabel } from "@/lib/match";
 import { exportExcel, exportPDF } from "@/lib/exporters";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 interface Props {
   empresa: string;
@@ -80,6 +81,19 @@ export const ResultsScreen = ({ empresa, cliente, rows, onReset }: Props) => {
   const setFilterAndReset = (f: FilterKind) => {
     setFilter(f);
     setPage(1);
+  };
+
+  const copyChaveAcesso = (value: string) => {
+    if (!value) return;
+    if (!navigator.clipboard) {
+      toast({ title: "Não foi possível copiar a chave de acesso." });
+      return;
+    }
+
+    void navigator.clipboard
+      .writeText(value)
+      .then(() => toast({ title: "Chave de acesso copiada." }))
+      .catch(() => toast({ title: "Não foi possível copiar a chave de acesso.", variant: "destructive" }));
   };
 
   return (
@@ -304,6 +318,25 @@ export const ResultsScreen = ({ empresa, cliente, rows, onReset }: Props) => {
                     <Field label="Contrato" value={selected.base.contrato} />
                     <Field label="Contr. Cliente" value={selected.base.contratoCliente} />
                     <Field label="Nota" value={selected.base.nota} />
+                    <div className="col-span-2">
+                      <dt className="text-xs text-muted-foreground">Chave de acesso (GRL053)</dt>
+                      <dd className="font-mono text-xs mt-0.5 flex items-center gap-2 break-all">
+                        <span>{selected.base.chaveAcesso || "—"}</span>
+                        {selected.base.chaveAcesso && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            title="Copiar chave de acesso"
+                            aria-label="Copiar chave de acesso"
+                            onClick={() => copyChaveAcesso(selected.base.chaveAcesso)}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </dd>
+                    </div>
                     <Field label="Após Desc (peso fiscal)" value={fmtNum(selected.base.aposDesc)} />
                   </dl>
                 </section>

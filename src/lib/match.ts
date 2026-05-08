@@ -25,6 +25,7 @@ export interface BaseRow {
   contrato: string;
   nota: string;
   contratoCliente: string;
+  chaveAcesso: string;
   aposDesc: number | null;
   raw: RawRow;
 }
@@ -57,6 +58,8 @@ export function parseBase(rows: RawRow[]): BaseRow[] {
     // Quando há duplicidade de cabeçalho, o SheetJS mantém a primeira ocorrência como "NOTA" e sufixa as demais.
     nota: normalizeNota(getCol(r, ["NOTA"])),
     contratoCliente: normalizeContrato(getCol(r, ["CONTR. CLIENTE", "CONTR CLIENTE", "CONTRATO CLIENTE"])),
+    // A chave de acesso do GRL053 é exibida apenas para conferência manual e não participa do matching da V1.
+    chaveAcesso: String(getCol(r, ["CHAVE DE ACESSO"]) ?? "").trim(),
     aposDesc: toNumber(getCol(r, ["APOS DESC", "APÓS DESC"])),
     raw: r,
   }));
