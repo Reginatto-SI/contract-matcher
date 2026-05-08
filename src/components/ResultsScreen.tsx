@@ -420,17 +420,19 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                 ) : (
                   pageRows.map((r) => {
                     const tone = situacaoTone[r.situacao];
+                    const indicator: Record<Tone, string> = {
+                      success: "border-l-transparent",
+                      destructive: "border-l-destructive",
+                      warning: "border-l-warning",
+                      info: "border-l-info",
+                    };
                     return (
                       <TableRow
                         key={r.id}
-                        className={cn(
-                          "cursor-pointer transition-colors hover:bg-accent/40 relative",
-                          "before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px]",
-                          tone === "success" ? "before:bg-transparent" : toneBorderLeft[tone],
-                        )}
+                        className="cursor-pointer transition-colors hover:bg-accent/40"
                         onClick={() => setSelected(r)}
                       >
-                        <TableCell>
+                        <TableCell className={cn("border-l-[3px]", indicator[tone])}>
                           <Badge variant="outline" className={cn("font-medium rounded-full px-2.5", situacaoBadge(r.situacao))}>
                             {situacaoLabel[r.situacao]}
                           </Badge>
