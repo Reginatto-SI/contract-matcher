@@ -51,6 +51,8 @@ export function parseBase(rows: RawRow[]): BaseRow[] {
   return rows.map((r) => ({
     placa: normalizePlaca(getCol(r, ["PLACA"])),
     contrato: normalizeContrato(getCol(r, ["CONTRATO"])),
+    // No layout GRL053 da V1, a nota fiscal usada no matching vem da primeira coluna "NOTA" (coluna M).
+    // Quando há duplicidade de cabeçalho, o SheetJS mantém a primeira ocorrência como "NOTA" e sufixa as demais.
     nota: normalizeNota(getCol(r, ["NOTA"])),
     contratoCliente: normalizeContrato(getCol(r, ["CONTR. CLIENTE", "CONTR CLIENTE", "CONTRATO CLIENTE"])),
     aposDesc: toNumber(getCol(r, ["APOS DESC", "APÓS DESC"])),

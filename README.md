@@ -34,7 +34,18 @@ Importar Base
 
 ---
 
-## 3. Regras Críticas
+## 3. Relatórios suportados na V1
+
+A V1 suporta apenas os layouts fixos documentados nos PRDs:
+
+- Relatório Base — GRL053, em `.xlsx` ou `.xls`.
+- Relatório Complementar — Inpasa, em `.xlsx` ou `.xls`.
+
+A importação é determinística: não existe DE/PARA, configuração de colunas, fuzzy match ou tentativa inteligente de localizar layouts alternativos. Se a estrutura não bater com o layout esperado, o sistema deve bloquear a importação e informar quais colunas não foram encontradas, incluindo a aba e a linha de cabeçalho validadas quando possível.
+
+Arquivos reais de teste ficam em `docs/XLS de Teste Import/`. A fonte de verdade funcional fica em `docs/PRD/`.
+
+## 4. Regras Críticas
 
 A chave única de vínculo da V1 é:
 
@@ -67,7 +78,7 @@ Status esperados na conferência:
 
 ---
 
-## 4. Arquitetura da V1
+## 5. Arquitetura da V1
 
 A V1 prioriza simplicidade operacional:
 
@@ -83,7 +94,7 @@ A implementação atual usa React + Vite + TypeScript, com componentes de UI no 
 
 ---
 
-## 5. Estrutura de Pastas
+## 6. Estrutura de Pastas
 
 A estrutura oficial de documentação usa sempre `docs` em minúsculo.
 
@@ -110,7 +121,7 @@ Pastas principais:
 
 ---
 
-## 6. Estrutura Técnica Simplificada
+## 7. Estrutura Técnica Simplificada
 
 Responsabilidades esperadas para futuras evoluções:
 
@@ -138,7 +149,7 @@ Essa divisão é uma referência de responsabilidade, não uma autorização par
 
 ---
 
-## 7. Decisões Consolidadas da V1
+## 8. Decisões Consolidadas da V1
 
 Estas decisões devem ser preservadas para evitar regressões futuras:
 
@@ -159,7 +170,7 @@ Estas decisões devem ser preservadas para evitar regressões futuras:
 
 ---
 
-## 8. Limitações Conhecidas da V1
+## 9. Limitações Conhecidas da V1
 
 As limitações abaixo são comportamento esperado da V1, não bug:
 
@@ -171,7 +182,7 @@ As limitações abaixo são comportamento esperado da V1, não bug:
 
 ---
 
-## 9. Filosofia de Implementação
+## 10. Filosofia de Implementação
 
 O projeto prioriza:
 

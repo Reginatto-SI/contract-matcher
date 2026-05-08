@@ -38,6 +38,8 @@ A importação deve ser rápida, determinística e sem necessidade de configura�
 ### Regras:
 - Arquivo deve conter cabeçalho válido
 - Arquivo não pode estar vazio
+- `.xlsx` e `.xls` são formatos obrigatórios da V1
+- O seletor de upload deve permitir `.xlsx` e `.xls`
 
 ---
 
@@ -78,6 +80,19 @@ Sistema valida estrutura → carrega dados em memória
 
 ## 5. Estrutura Esperada dos Relatórios
 
+### 5.0 Aba e linha de cabeçalho na V1
+
+A V1 mantém importação simples, fixa e determinística:
+
+- Relatório Base GRL053:
+  - aba oficial: primeira aba do arquivo
+  - linha de cabeçalho esperada: linha 3
+- Relatório Complementar Inpasa:
+  - aba oficial: primeira aba do arquivo
+  - linha de cabeçalho esperada: linha 2
+
+O sistema não deve procurar colunas em todo o arquivo nem tentar adivinhar cabeçalhos. Ele deve ler a aba e a linha definidas para cada layout e validar se as colunas obrigatórias existem nessa linha.
+
 ### 5.1 Relatório Base — GRL053
 
 Colunas obrigatórias:
@@ -117,8 +132,18 @@ Colunas obrigatórias:
 Mensagem exemplo:
 
 ```text
-Coluna obrigatória não encontrada: "Nr Contr Original"
+Relatório Complementar (Inpasa): coluna obrigatória não encontrada: "Nr Contr Original".
+Aba lida: "Relatório de Entrada". Linha de cabeçalho validada: 2.
+Colunas encontradas: Safra, Desc. Tipo Frete, Placa, Número NF, ...
 ```
+
+A mensagem de erro deve informar, sempre que possível:
+
+- tipo do relatório;
+- aba lida;
+- linha de cabeçalho validada;
+- colunas obrigatórias ausentes;
+- colunas encontradas na linha validada.
 
 ---
 
