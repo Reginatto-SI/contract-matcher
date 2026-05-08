@@ -2,6 +2,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { MatchedRow, situacaoLabel } from "./match";
+import { formatDataEmissao } from "./normalize";
 
 interface ExportContext {
   empresa: string;
@@ -15,16 +16,17 @@ const fmtNum = (n: number | null) =>
 export function exportExcel({ empresa, cliente, rows }: ExportContext) {
   const data = rows.map((r) => ({
     Situação: situacaoLabel[r.situacao],
-    Detalhe: r.detalhe,
+    "Data emissão": formatDataEmissao(r.base.data_emissao),
     "Contrato Cliente (Base)": r.base.contratoCliente,
-    "Contrato Original (Comp.)": r.comp?.nrContrOriginal ?? "",
     "Nota (Base)": r.base.nota,
-    "NF (Comp.)": r.comp?.numeroNF ?? "",
     "Placa Base": r.base.placa,
     "Placa Cliente": r.comp?.placa ?? "",
-    "Alerta Placa": r.placaDivergente ? "Sim" : "",
     "Peso Fiscal (Após Desc)": fmtNum(r.base.aposDesc),
     "Peso Físico (Total Líquido)": fmtNum(r.comp?.totalLiquido ?? null),
+    Detalhe: r.detalhe,
+    "Contrato Original (Comp.)": r.comp?.nrContrOriginal ?? "",
+    "NF (Comp.)": r.comp?.numeroNF ?? "",
+    "Alerta Placa": r.placaDivergente ? "Sim" : "",
     Empresa: empresa,
     Cliente: cliente,
   }));
@@ -50,6 +52,7 @@ export function exportPDF({ empresa, cliente, rows }: ExportContext) {
     head: [
       [
         "Situação",
+        "Data emissão",
         "Contr. Cliente",
         "Nota",
         "Placa Base",
@@ -61,6 +64,7 @@ export function exportPDF({ empresa, cliente, rows }: ExportContext) {
     ],
     body: rows.map((r) => [
       situacaoLabel[r.situacao],
+      formatDataEmissao(r.base.data_emissao),
       r.base.contratoCliente,
       r.base.nota,
       r.base.placa + (r.placaDivergente ? " ⚠" : ""),
@@ -71,7 +75,7 @@ export function exportPDF({ empresa, cliente, rows }: ExportContext) {
     ]),
     styles: { fontSize: 8, cellPadding: 4 },
     headStyles: { fillColor: [27, 78, 168] },
-    columnStyles: { 7: { cellWidth: 220 } },
+    columnStyles: { 8: { cellWidth: 200 } },
   });
 
   doc.save(`conferencia-${Date.now()}.pdf`);
