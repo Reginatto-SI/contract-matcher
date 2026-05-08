@@ -69,7 +69,7 @@ describe("layouts fixos de clientes", () => {
   it("mantém as colunas obrigatórias do layout complementar FS", () => {
     const cliente = getClienteSuportado("fs");
 
-    expect(cliente.headerRow).toBe(2);
+    expect(cliente.headerRow).toBe(1);
     expect(cliente.requiredColumns).toEqual([
       "Placa Caminhão",
       "Nº Nota Fiscal",
@@ -81,7 +81,6 @@ describe("layouts fixos de clientes", () => {
   it("bloqueia importação FS quando coluna obrigatória está ausente", async () => {
     const workbook = XLSX.utils.book_new();
     const worksheet = XLSX.utils.aoa_to_sheet([
-      ["linha antes do cabeçalho"],
       ["Placa Caminhão", "Nº Nota Fiscal", "Peso Líquido"],
       ["ABC1234", "456", 100],
     ]);
@@ -101,7 +100,7 @@ describe("layouts fixos de clientes", () => {
     ).rejects.toThrow(
       [
         'Relatório Complementar (FS): coluna obrigatória não encontrada: "Pedido".',
-        'Aba lida: "FS Entrada". Linha de cabeçalho validada: 2.',
+        'Aba lida: "FS Entrada". Linha de cabeçalho validada: 1.',
         'Colunas encontradas: Placa Caminhão, Nº Nota Fiscal, Peso Líquido',
       ].join(" "),
     );

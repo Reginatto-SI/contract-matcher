@@ -39,7 +39,7 @@ export const CLIENTES_SUPORTADOS: Array<
   {
     id: "fs",
     label: "FS",
-    // Layout complementar FS: Pedido e Nº Nota Fiscal são os únicos campos de vínculo;
+    // Layout complementar FS real: cabeçalho na linha 1; Pedido e Nº Nota Fiscal são os únicos campos de vínculo.
     // Placa Caminhão e Peso Líquido são importados apenas como informação visual.
     requiredColumns: [
       "Placa Caminhão",
@@ -47,7 +47,7 @@ export const CLIENTES_SUPORTADOS: Array<
       "Peso Líquido",
       "Pedido",
     ],
-    headerRow: 2,
+    headerRow: 1,
   },
 ];
 

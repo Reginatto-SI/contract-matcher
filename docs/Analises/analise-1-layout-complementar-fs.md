@@ -4,7 +4,7 @@
 
 O projeto já possuía uma lista fixa de layouts complementares em `src/lib/layouts.ts`, com o layout Inpasa configurado com cabeçalho na linha 2. O novo layout FS foi implementado no mesmo ponto para manter o padrão determinístico e sem cadastro dinâmico de layouts.
 
-A importação do complementar continua usando a primeira aba do arquivo e a linha de cabeçalho definida no layout selecionado. Como não havia no código uma evidência específica para uma linha de cabeçalho diferente do FS, o FS foi configurado com `headerRow: 2`, seguindo a mesma estrutura existente para o complementar Inpasa. Essa decisão deve ser validada com arquivo real da FS caso o cabeçalho oficial esteja em outra linha.
+A importação do complementar continua usando a primeira aba do arquivo e a linha de cabeçalho definida no layout selecionado. Após validação com arquivo real da FS, foi confirmado que o cabeçalho oficial do complementar FS fica na linha 1. Por isso, o layout FS foi ajustado para `headerRow: 1`, mantendo Inpasa com `headerRow: 2`.
 
 ## Mapeamento
 
@@ -55,4 +55,4 @@ Foram adicionados testes para validar:
 
 ## Pontos de atenção
 
-A linha de cabeçalho do FS foi definida como linha 2 porque o código atual já tratava o complementar Inpasa dessa forma e não havia confirmação de uma linha diferente para FS no repositório. Se um arquivo real da FS confirmar outro cabeçalho, ajustar apenas o `headerRow` do layout FS em `src/lib/layouts.ts`.
+A linha de cabeçalho do FS foi corrigida para linha 1 com base no arquivo real testado. O ajuste é localizado no `headerRow` do layout FS em `src/lib/layouts.ts` e não altera GRL053, Inpasa ou a regra de matching.
