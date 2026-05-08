@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { computeKpis, match, parseBase } from "@/lib/match";
+import { computeKpis, match, parseBase, parseBaseWithStats } from "@/lib/match";
 import type { BaseRow, CompRow } from "@/lib/match";
 
 const baseRow = (overrides: Partial<BaseRow> = {}): BaseRow => ({
   placa: "ABC1234",
   contrato: "10",
+  modalidade: "EXP",
   contratoCliente: "123",
   nota: "456",
   chaveAcesso: "",
@@ -23,11 +24,25 @@ const compRow = (overrides: Partial<CompRow> = {}): CompRow => ({
 });
 
 describe("parseBase", () => {
+  it("ignora linhas do GRL053 com modalidade diferente de EXP antes do matching", () => {
+    const result = parseBaseWithStats([
+      { PLACA: "ABC1234", CONTRATO: "10", MOD: " exp ", NOTA: "456", "CONTR. CLIENTE": "123", "APOS DESC": 100 },
+      { PLACA: "DEF5678", CONTRATO: "11", MOD: "FIX", NOTA: "0", "CONTR. CLIENTE": "999", "APOS DESC": 50 },
+      { PLACA: "GHI9012", CONTRATO: "12", MOD: "DEV", NOTA: "", "CONTR. CLIENTE": "888", "APOS DESC": 20 },
+    ]);
+
+    expect(result.totalArquivo).toBe(3);
+    expect(result.ignoradasModalidade).toBe(2);
+    expect(result.base).toHaveLength(1);
+    expect(result.base[0].modalidade).toBe("EXP");
+  });
+
   it("lê a chave de acesso informativa do GRL053 pela coluna CHAVE DE ACESSO", () => {
     const [row] = parseBase([
       {
         PLACA: "ABC1234",
         CONTRATO: "10",
+        MOD: "EXP",
         NOTA: "456",
         "CONTR. CLIENTE": "123",
         "CHAVE DE ACESSO": " 35123456789012345678901234567890123456789012 ",

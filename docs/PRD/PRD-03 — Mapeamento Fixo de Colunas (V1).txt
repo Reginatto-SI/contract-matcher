@@ -37,12 +37,23 @@ Na V1, o GRL053 deve ser lido na primeira aba do arquivo, com cabeçalho fixo na
 | ---------------- | ----------------- | ------ | ------------------- |
 | placa            | PLACA             | texto  | Informativo         |
 | contrato_interno | CONTRATO          | texto  | Informativo         |
+| modalidade       | MOD               | texto  | Filtro de importação / regra operacional |
 | data_emissao     | DATA ROMANEIO     | data   | Informativo         |
 | nota             | NOTA              | texto  | Vínculo             |
 | peso_fiscal      | APOS DESC         | número | Informativo         |
 | chave_acesso     | CHAVE DE ACESSO   | texto  | Informativo (chNFe; coluna N do GRL053; não participa do matching da V1) |
 | contrato_cliente | CONTR. CLIENTE    | texto  | Vínculo (principal) |
 | observacao       | OBSERVAÇÃO NF     | texto  | Informativo         |
+
+### 3.2 Regra operacional da coluna MOD
+
+A coluna `MOD` não participa do vínculo. Ela serve apenas para definir se a linha do GRL053 deve entrar na conferência.
+
+Regras:
+
+* `MOD = EXP` representa expedição e deve ser analisado.
+* `MOD` diferente de `EXP` deve ser ignorado antes do matching.
+* Não aceitar valores parecidos, fuzzy match, inferência ou correção automática para modalidade.
 
 ---
 
@@ -62,6 +73,7 @@ Na V1, o relatório complementar Inpasa deve ser lido na primeira aba do arquivo
 | peso_fisico      | Total Líquido     | número | Informativo         |
 
 ---
+
 
 ## 5. Regra de Vínculo
 
@@ -83,6 +95,8 @@ Nr Contr Original + Número NF
 - contrato_cliente
 - nota
 ```
+
+A coluna `modalidade` / `MOD` não é campo de vínculo.
 
 ---
 

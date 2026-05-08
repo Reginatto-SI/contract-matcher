@@ -117,7 +117,9 @@ Permitir que a cooperativa responda:
 
 ### Processamento:
 
-* Sistema cruza os dados com base em:
+* Sistema considera, no GRL053, somente linhas de expedição com `MOD = EXP` antes do matching.
+* Linhas do GRL053 com `MOD` diferente de `EXP` são movimentos fora do escopo da conferência e não geram erro.
+* Sistema cruza os dados analisados com base em:
 
   * Contrato cliente
   * Nota fiscal

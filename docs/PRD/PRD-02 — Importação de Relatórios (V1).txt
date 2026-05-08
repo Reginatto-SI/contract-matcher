@@ -99,6 +99,7 @@ Colunas obrigatórias:
 
 * PLACA
 * CONTRATO
+* MOD
 * NOTA
 * CONTR. CLIENTE
 * APOS DESC
@@ -107,6 +108,30 @@ Observação:
 
 * Os nomes devem bater exatamente com o layout esperado
 * Não haverá mapeamento dinâmico
+* A coluna `MOD` é obrigatória para garantir que a análise considere somente expedições.
+
+Regra operacional do GRL053:
+
+* Durante a importação, considerar somente linhas com `MOD = EXP`.
+* O valor de `MOD` deve ser convertido para texto, ter espaços removidos no início/fim e ser comparado em maiúsculo.
+* Linhas com `MOD` diferente de `EXP` devem ser ignoradas antes do matching.
+* Linhas ignoradas por modalidade diferente de `EXP` não devem gerar status de erro, base inválida, contrato não encontrado ou nota não encontrada.
+* Se a coluna `MOD` não existir, a importação deve falhar com erro claro, pois o sistema não pode garantir que está analisando apenas expedições.
+
+Mensagem esperada quando apenas `MOD` estiver ausente:
+
+```text
+Coluna obrigatória não encontrada: "MOD"
+```
+
+Resumo técnico opcional após a importação:
+
+```text
+Arquivo importado com sucesso.
+Registros no arquivo: X
+Registros analisados: Y
+Linhas ignoradas por modalidade diferente de EXP: Z
+```
 
 ---
 
@@ -149,7 +174,7 @@ A mensagem de erro deve informar, sempre que possível:
 
 ### 6.2 Validação de Conteúdo
 
-Para cada linha:
+Para cada linha do GRL053 apta à conferência (`MOD = EXP`) e para cada linha do complementar:
 
 * Ignorar linhas completamente vazias
 * Garantir que pelo menos:

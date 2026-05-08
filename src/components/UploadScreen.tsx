@@ -108,7 +108,7 @@ export const UploadScreen = ({ onSubmit, loading, error }: Props) => {
               <div>
                 <h3 className="font-medium text-sm">Relatório Base — GRL053</h3>
                 <p className="text-xs text-muted-foreground">
-                  Colunas: PLACA, CONTRATO, NOTA, CONTR. CLIENTE, APOS DESC
+                  Colunas: PLACA, CONTRATO, MOD, NOTA, CONTR. CLIENTE, APOS DESC
                 </p>
               </div>
               <FilePicker
