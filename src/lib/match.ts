@@ -27,6 +27,7 @@ export interface BaseRow {
   nota: string;
   contratoCliente: string;
   chaveAcesso: string;
+  data_emissao: unknown;
   aposDesc: number | null;
   raw: RawRow;
 }
@@ -84,6 +85,8 @@ export function parseBaseWithStats(rows: RawRow[]): ParseBaseResult {
       contratoCliente: normalizeContrato(getCol(r, ["CONTR. CLIENTE", "CONTR CLIENTE", "CONTRATO CLIENTE"])),
       // A chave de acesso do GRL053 é exibida apenas para conferência manual e não participa do matching da V1.
       chaveAcesso: String(getCol(r, ["CHAVE DE ACESSO"]) ?? "").trim(),
+      // DATA ROMANEIO é informativa para tela/exportação; não entra na chave, status ou divergências.
+      data_emissao: getCol(r, ["DATA ROMANEIO"]),
       aposDesc: toNumber(getCol(r, ["APOS DESC", "APÓS DESC"])),
       raw: r,
     });

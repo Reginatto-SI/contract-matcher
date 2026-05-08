@@ -1,5 +1,15 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, Download, FileText, Search, AlertTriangle, Copy } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowUpDown,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Download,
+  FileText,
+  Search,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { computeKpis, MatchedRow, Situacao, situacaoLabel } from "@/lib/match";
 import { exportExcel, exportPDF } from "@/lib/exporters";
 import { cn } from "@/lib/utils";
+import { dataEmissaoToTime, formatDataEmissao } from "@/lib/normalize";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -30,8 +41,80 @@ type FilterKind = "ALL" | "OK" | "BASE_INVALIDA" | "CONTRATO" | "NOTA" | "DIVERG
 
 const PAGE_SIZE = 25;
 
+export type SortKey =
+  | "situacao"
+  | "data_emissao"
+  | "contratoCliente"
+  | "nota"
+  | "placaBase"
+  | "placaCliente"
+  | "pesoFiscal"
+  | "pesoFisico";
+export type SortDirection = "asc" | "desc";
+export interface SortState {
+  key: SortKey;
+  direction: SortDirection;
+}
+
 const fmtNum = (n: number | null) =>
   n === null ? "—" : n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const parseSortableNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") return null;
+  const normalized = String(value).trim().replace(/\./g, "").replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const compareWithNullLast = (a: number | string | null, b: number | string | null, direction: SortDirection) => {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+
+  const base =
+    typeof a === "number" && typeof b === "number"
+      ? a - b
+      : String(a).localeCompare(String(b), "pt-BR", { numeric: true, sensitivity: "base" });
+
+  return direction === "asc" ? base : -base;
+};
+
+export const sortMatchedRows = (rows: MatchedRow[], sort: SortState | null): MatchedRow[] => {
+  if (!sort) return rows;
+
+  return [...rows].sort((a, b) => {
+    let result = 0;
+
+    switch (sort.key) {
+      case "situacao":
+        result = compareWithNullLast(situacaoLabel[a.situacao], situacaoLabel[b.situacao], sort.direction);
+        break;
+      case "data_emissao":
+        result = compareWithNullLast(dataEmissaoToTime(a.base.data_emissao), dataEmissaoToTime(b.base.data_emissao), sort.direction);
+        break;
+      case "contratoCliente":
+        result = compareWithNullLast(parseSortableNumber(a.base.contratoCliente), parseSortableNumber(b.base.contratoCliente), sort.direction);
+        break;
+      case "nota":
+        result = compareWithNullLast(parseSortableNumber(a.base.nota), parseSortableNumber(b.base.nota), sort.direction);
+        break;
+      case "placaBase":
+        result = compareWithNullLast(a.base.placa || null, b.base.placa || null, sort.direction);
+        break;
+      case "placaCliente":
+        result = compareWithNullLast(a.comp?.placa || null, b.comp?.placa || null, sort.direction);
+        break;
+      case "pesoFiscal":
+        result = compareWithNullLast(a.base.aposDesc, b.base.aposDesc, sort.direction);
+        break;
+      case "pesoFisico":
+        result = compareWithNullLast(a.comp?.totalLiquido ?? null, b.comp?.totalLiquido ?? null, sort.direction);
+        break;
+    }
+
+    return result || a.id - b.id;
+  });
+};
 
 const situacaoBadge = (s: Situacao) => {
   const map: Record<Situacao, string> = {
@@ -51,6 +134,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<MatchedRow | null>(null);
+  const [sort, setSort] = useState<SortState | null>(null);
 
   const kpis = useMemo(() => computeKpis(rows), [rows]);
 
@@ -69,16 +153,46 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
       if (filter === "ALERTAS" && !r.placaDivergente) return false;
       if (q) {
         const hay =
-          `${situacaoLabel[r.situacao]} ${r.detalhe} ${r.base.contratoCliente} ${r.base.nota} ${r.base.placa} ${r.comp?.placa ?? ""} ${r.comp?.numeroNF ?? ""} ${r.comp?.nrContrOriginal ?? ""}`.toLowerCase();
+          `${situacaoLabel[r.situacao]} ${formatDataEmissao(r.base.data_emissao)} ${r.detalhe} ${r.base.contratoCliente} ${r.base.nota} ${r.base.placa} ${r.comp?.placa ?? ""} ${r.comp?.numeroNF ?? ""} ${r.comp?.nrContrOriginal ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
   }, [rows, filter, search]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const sorted = useMemo(() => sortMatchedRows(filtered, sort), [filtered, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pageRows = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const toggleSort = (key: SortKey) => {
+    setSort((current) =>
+      current?.key === key ? { key, direction: current.direction === "asc" ? "desc" : "asc" } : { key, direction: "asc" },
+    );
+    setPage(1);
+  };
+
+  const sortIcon = (key: SortKey) => {
+    if (sort?.key !== key) return <ArrowUpDown className="h-3 w-3 opacity-45" />;
+    return sort.direction === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
+  };
+
+  const renderSortableHead = (label: string, key: SortKey, className?: string, title?: string) => (
+    <TableHead className={className} title={title}>
+      <button
+        type="button"
+        className={cn(
+          "inline-flex w-full items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+          className?.includes("text-right") && "justify-end",
+        )}
+        onClick={() => toggleSort(key)}
+      >
+        <span>{label}</span>
+        {sortIcon(key)}
+      </button>
+    </TableHead>
+  );
 
   const setFilterAndReset = (f: FilterKind) => {
     setFilter(f);
@@ -132,10 +246,10 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => exportExcel({ empresa, cliente, rows: filtered })}>
+              <DropdownMenuItem onClick={() => exportExcel({ empresa, cliente, rows: sorted })}>
                 <FileText className="h-4 w-4" /> Excel (.xlsx)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportPDF({ empresa, cliente, rows: filtered })}>
+              <DropdownMenuItem onClick={() => exportPDF({ empresa, cliente, rows: sorted })}>
                 <FileText className="h-4 w-4" /> PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -227,20 +341,21 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40">
-                <TableHead className="w-[200px]">Situação</TableHead>
-                <TableHead>Contr. Cliente</TableHead>
-                <TableHead>Nota</TableHead>
-                <TableHead>Placa Base</TableHead>
-                <TableHead>Placa Cliente</TableHead>
-                <TableHead className="text-right">Peso Fiscal</TableHead>
-                <TableHead className="text-right">Peso Físico</TableHead>
+                {renderSortableHead("Situação", "situacao", "w-[180px]")}
+                {renderSortableHead("Data emissão", "data_emissao", undefined, "Data emissão vinda da DATA ROMANEIO do GRL053")}
+                {renderSortableHead("Contr. Cliente", "contratoCliente")}
+                {renderSortableHead("Nota", "nota")}
+                {renderSortableHead("Placa Base", "placaBase")}
+                {renderSortableHead("Placa Cliente", "placaCliente")}
+                {renderSortableHead("Peso Fiscal", "pesoFiscal", "text-right")}
+                {renderSortableHead("Peso Físico", "pesoFisico", "text-right")}
                 <TableHead>Detalhe</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pageRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                     Nenhum registro com os filtros atuais.
                   </TableCell>
                 </TableRow>
@@ -256,6 +371,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                         {situacaoLabel[r.situacao]}
                       </Badge>
                     </TableCell>
+                    <TableCell className="font-mono text-xs tabular-nums">{formatDataEmissao(r.base.data_emissao)}</TableCell>
                     <TableCell className="font-mono text-xs">{r.base.contratoCliente || "—"}</TableCell>
                     <TableCell className="font-mono text-xs">{r.base.nota || "—"}</TableCell>
                     <TableCell className="font-mono text-xs">{r.base.placa || "—"}</TableCell>
@@ -278,7 +394,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
             </TableBody>
           </Table>
 
-          {filtered.length > PAGE_SIZE && (
+          {sorted.length > PAGE_SIZE && (
             <div className="flex items-center justify-between px-4 py-3 border-t text-sm">
               <div className="text-muted-foreground">
                 Página {safePage} de {totalPages}
@@ -356,6 +472,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                   <h4 className="font-semibold text-xs uppercase text-muted-foreground mb-2">Informações complementares</h4>
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
                     <Field label="Contrato (base)" value={selected.base.contrato} />
+                    <Field label="Data emissão" value={formatDataEmissao(selected.base.data_emissao)} />
                     <Field label="Após Desc (peso fiscal)" value={fmtNum(selected.base.aposDesc)} />
                     <Field label="Total Líquido (peso físico)" value={fmtNum(selected.comp?.totalLiquido ?? null)} />
                     <div className="col-span-2">
