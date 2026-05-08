@@ -63,6 +63,7 @@ const PAGE_SIZE = 25;
 export type SortKey =
   | "situacao"
   | "data_emissao"
+  | "contratoInterno"
   | "contratoCliente"
   | "nota"
   | "placaBase"
@@ -110,6 +111,9 @@ export const sortMatchedRows = (rows: MatchedRow[], sort: SortState | null): Mat
         break;
       case "data_emissao":
         result = compareWithNullLast(dataEmissaoToTime(a.base.data_emissao), dataEmissaoToTime(b.base.data_emissao), sort.direction);
+        break;
+      case "contratoInterno":
+        result = compareWithNullLast(a.base.contrato_interno || null, b.base.contrato_interno || null, sort.direction);
         break;
       case "contratoCliente":
         result = compareWithNullLast(parseSortableNumber(a.base.contratoCliente), parseSortableNumber(b.base.contratoCliente), sort.direction);
@@ -184,8 +188,9 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
         return false;
       if (filter === "ALERTAS" && !r.placaDivergente) return false;
       if (q) {
+        // Contrato MX entra apenas na busca operacional; não participa do matching.
         const hay =
-          `${situacaoLabel[r.situacao]} ${formatDataEmissao(r.base.data_emissao)} ${r.detalhe} ${r.base.contratoCliente} ${r.base.nota} ${r.base.placa} ${r.comp?.placa ?? ""} ${r.comp?.numeroNF ?? ""} ${r.comp?.nrContrOriginal ?? ""}`.toLowerCase();
+          `${situacaoLabel[r.situacao]} ${formatDataEmissao(r.base.data_emissao)} ${r.detalhe} ${r.base.contrato_interno} ${r.base.contratoCliente} ${r.base.nota} ${r.base.placa} ${r.comp?.placa ?? ""} ${r.comp?.numeroNF ?? ""} ${r.comp?.nrContrOriginal ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -417,7 +422,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Buscar por contrato, nota ou placa..."
+                placeholder="Buscar por Contrato MX, contrato cliente, nota ou placa..."
                 className="pl-9 h-9 bg-card"
               />
             </div>
@@ -448,6 +453,8 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                 <TableRow className="bg-muted/40 hover:bg-muted/40 border-b">
                   {renderSortableHead("Situação", "situacao", "w-[180px]")}
                   {renderSortableHead("Data emissão", "data_emissao", undefined, "Data emissão vinda da DATA ROMANEIO do GRL053")}
+                  {/* Contrato MX é campo informativo do GRL053 (CONTRATO) e não participa do matching. */}
+                  {renderSortableHead("Contrato MX", "contratoInterno", "whitespace-nowrap")}
                   {renderSortableHead("Contr. Cliente", "contratoCliente")}
                   {renderSortableHead("Nota", "nota")}
                   {renderSortableHead("Placa Base", "placaBase")}
@@ -462,7 +469,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
               <TableBody>
                 {pageRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                       Nenhum registro com os filtros atuais.
                     </TableCell>
                   </TableRow>
@@ -489,6 +496,8 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                         <TableCell className="font-mono text-xs tabular-nums text-muted-foreground">
                           {formatDataEmissao(r.base.data_emissao)}
                         </TableCell>
+                        {/* Campo informativo do GRL053 (CONTRATO/Contrato MX); não altera vínculo, status ou KPIs. */}
+                        <TableCell className="font-mono text-xs whitespace-nowrap">{r.base.contrato_interno || "—"}</TableCell>
                         <TableCell className="font-mono text-xs">{r.base.contratoCliente || "—"}</TableCell>
                         <TableCell className="font-mono text-xs">{r.base.nota || "—"}</TableCell>
                         <TableCell className="font-mono text-xs">{r.base.placa || "—"}</TableCell>
