@@ -312,12 +312,43 @@ export const ResultsScreen = ({ empresa, cliente, rows, onReset }: Props) => {
                 </section>
 
                 <section>
-                  <h4 className="font-semibold text-xs uppercase text-muted-foreground mb-2">Base — GRL053</h4>
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-                    <Field label="Placa" value={selected.base.placa} />
-                    <Field label="Contrato" value={selected.base.contrato} />
-                    <Field label="Contr. Cliente" value={selected.base.contratoCliente} />
-                    <Field label="Nota" value={selected.base.nota} />
+                  <h4 className="font-semibold text-xs uppercase text-muted-foreground mb-2">Comparação principal</h4>
+                  <div className="space-y-2">
+                    {/* Comparação visual: estes cards apenas explicam os pares usados na conferência, sem alterar o matching. */}
+                    <ComparisonRow
+                      label="Contrato"
+                      baseLabel="Base GRL053 · Contr. Cliente"
+                      baseValue={selected.base.contratoCliente}
+                      compLabel="Complementar Inpasa · Nr Contr Original"
+                      compValue={selected.comp?.nrContrOriginal}
+                      severity="key"
+                    />
+                    <ComparisonRow
+                      label="Nota Fiscal"
+                      baseLabel="Base GRL053 · Nota"
+                      baseValue={selected.base.nota}
+                      compLabel="Complementar Inpasa · Número NF"
+                      compValue={selected.comp?.numeroNF}
+                      severity="key"
+                    />
+                    <ComparisonRow
+                      label="Placa"
+                      baseLabel="Base GRL053 · Placa"
+                      baseValue={selected.base.placa}
+                      compLabel="Complementar Inpasa · Placa"
+                      compValue={selected.comp?.placa}
+                      severity="info"
+                      note="Apenas alerta informativo; placa não afeta a classificação."
+                    />
+                  </div>
+                </section>
+
+                <section>
+                  <h4 className="font-semibold text-xs uppercase text-muted-foreground mb-2">Informações complementares</h4>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                    <Field label="Contrato (base)" value={selected.base.contrato} />
+                    <Field label="Após Desc (peso fiscal)" value={fmtNum(selected.base.aposDesc)} />
+                    <Field label="Total Líquido (peso físico)" value={fmtNum(selected.comp?.totalLiquido ?? null)} />
                     <div className="col-span-2">
                       <dt className="text-xs text-muted-foreground">Chave de acesso (GRL053)</dt>
                       <dd className="font-mono text-xs mt-0.5 flex items-center gap-2 break-all">
@@ -337,23 +368,14 @@ export const ResultsScreen = ({ empresa, cliente, rows, onReset }: Props) => {
                         )}
                       </dd>
                     </div>
-                    <Field label="Após Desc (peso fiscal)" value={fmtNum(selected.base.aposDesc)} />
                   </dl>
                 </section>
 
-                <section>
-                  <h4 className="font-semibold text-xs uppercase text-muted-foreground mb-2">Complementar — Inpasa</h4>
-                  {selected.comp ? (
-                    <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-                      <Field label="Placa" value={selected.comp.placa} />
-                      <Field label="Nr Contr Original" value={selected.comp.nrContrOriginal} />
-                      <Field label="Número NF" value={selected.comp.numeroNF} />
-                      <Field label="Total Líquido (peso físico)" value={fmtNum(selected.comp.totalLiquido)} />
-                    </dl>
-                  ) : (
-                    <p className="text-muted-foreground italic">Nenhum registro correspondente no complementar.</p>
-                  )}
-                </section>
+                {!selected.comp && (
+                  <p className="text-xs text-muted-foreground italic">
+                    Nenhum registro correspondente no complementar para exibir nos pares comparativos.
+                  </p>
+                )}
 
                 {selected.placaDivergente && (
                   <div className="flex items-start gap-2 rounded-md bg-warning-soft text-warning p-3">
@@ -370,6 +392,85 @@ export const ResultsScreen = ({ empresa, cliente, rows, onReset }: Props) => {
       </Sheet>
     </div>
   );
+};
+
+type ComparisonSeverity = "key" | "info";
+
+interface ComparisonRowProps {
+  label: string;
+  baseLabel: string;
+  baseValue: string;
+  compLabel: string;
+  compValue?: string;
+  severity: ComparisonSeverity;
+  note?: string;
+}
+
+const ComparisonRow = ({ label, baseLabel, baseValue, compLabel, compValue, severity, note }: ComparisonRowProps) => {
+  const hasCompValue = !!compValue;
+  // Comparação estritamente visual entre os valores já normalizados pelo fluxo existente; não participa do matching.
+  const isSame = hasCompValue && baseValue === compValue;
+  const tone = getComparisonTone(hasCompValue, isSame, severity);
+
+  return (
+    <div className={cn("rounded-lg border p-3", tone.card)}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="font-medium text-sm">{label}</div>
+          {note && <p className="text-[11px] text-muted-foreground mt-0.5">{note}</p>}
+        </div>
+        <Badge variant="outline" className={cn("shrink-0", tone.badge)}>
+          {tone.label}
+        </Badge>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <ComparisonValue label={baseLabel} value={baseValue} />
+        <ComparisonValue label={compLabel} value={compValue} />
+      </div>
+    </div>
+  );
+};
+
+const ComparisonValue = ({ label, value }: { label: string; value?: string }) => (
+  <div className="rounded-md bg-background/70 border border-border/60 p-2 min-w-0">
+    <div className="text-[11px] text-muted-foreground leading-tight">{label}</div>
+    <div className="font-mono text-xs mt-1 truncate" title={value || "—"}>
+      {value || "—"}
+    </div>
+  </div>
+);
+
+const getComparisonTone = (hasCompValue: boolean, isSame: boolean, severity: ComparisonSeverity) => {
+  if (!hasCompValue) {
+    return {
+      label: "Sem complementar",
+      card: "bg-muted/30",
+      badge: "bg-muted text-muted-foreground border-border",
+    };
+  }
+
+  if (isSame) {
+    return {
+      label: "Iguais",
+      card: "bg-success-soft/50 border-success/30",
+      badge: "bg-success-soft text-success border-success/30",
+    };
+  }
+
+  // Divergência de placa tem tom de alerta porque é informativa; divergências de contrato/nota são chave visual.
+  if (severity === "info") {
+    return {
+      label: "Alerta",
+      card: "bg-warning-soft/60 border-warning/30",
+      badge: "bg-warning-soft text-warning border-warning/30",
+    };
+  }
+
+  return {
+    label: "Diferentes",
+    card: "bg-destructive-soft/50 border-destructive/30",
+    badge: "bg-destructive-soft text-destructive border-destructive/30",
+  };
 };
 
 const Field = ({ label, value }: { label: string; value: string }) => (
