@@ -39,16 +39,53 @@ export function exportExcel({ empresa, cliente, rows }: ExportContext) {
 
 export function exportPDF({ empresa, cliente, rows }: ExportContext) {
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const marginX = 40;
+  const contentWidth = pageWidth - marginX * 2;
+  const footerText = "Gerado por JM Assessoria e Contabilidade | www.jmassessoriamt.com.br";
+
   doc.setFontSize(14);
-  doc.text("Conferência de Contratos", 40, 40);
+  doc.text("Conferência de Contratos", marginX, 40);
+
   doc.setFontSize(10);
-  doc.text(`Empresa: ${empresa}`, 40, 58);
-  doc.text(`Cliente: ${cliente}`, 300, 58);
-  doc.text(`Total: ${rows.length}`, 560, 58);
-  doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 40, 74);
+  let headerY = 58;
+  const lineHeight = 12;
+  const empresaLines = doc.splitTextToSize(`Empresa: ${empresa}`, contentWidth);
+  // Cabeçalho e rodapé organizados para evitar sobreposição e caracteres especiais com renderização inconsistente no PDF.
+  doc.text(empresaLines, marginX, headerY);
+  headerY += empresaLines.length * lineHeight + 6;
+
+  const headerDetails = [`Cliente: ${cliente}`, `Total: ${rows.length}`, `Gerado em: ${new Date().toLocaleString("pt-BR")}`];
+  const detailsGap = 18;
+  const detailsWidth = headerDetails.reduce((total, text) => total + doc.getTextWidth(text), 0);
+
+  if (detailsWidth + detailsGap * (headerDetails.length - 1) <= contentWidth) {
+    let detailX = marginX;
+    headerDetails.forEach((text) => {
+      doc.text(text, detailX, headerY);
+      detailX += doc.getTextWidth(text) + detailsGap;
+    });
+    headerY += lineHeight;
+  } else {
+    headerDetails.forEach((text) => {
+      const detailLines = doc.splitTextToSize(text, contentWidth);
+      doc.text(detailLines, marginX, headerY);
+      headerY += detailLines.length * lineHeight;
+    });
+  }
+
+  const tableStartY = Math.max(headerY + 18, 90);
+  const drawFooter = (pageNumber: number) => {
+    doc.setFontSize(8);
+    doc.setTextColor(110);
+    doc.text(`${footerText} | Página ${pageNumber}`, pageWidth / 2, pageHeight - 18, { align: "center" });
+    doc.setTextColor(0);
+  };
 
   autoTable(doc, {
-    startY: 90,
+    startY: tableStartY,
+    margin: { bottom: 36 },
     head: [
       [
         "Situação",
@@ -67,7 +104,7 @@ export function exportPDF({ empresa, cliente, rows }: ExportContext) {
       formatDataEmissao(r.base.data_emissao),
       r.base.contratoCliente,
       r.base.nota,
-      r.base.placa + (r.placaDivergente ? " ⚠" : ""),
+      r.base.placa + (r.placaDivergente ? " (alerta)" : ""),
       r.comp?.placa ?? "",
       fmtNum(r.base.aposDesc),
       fmtNum(r.comp?.totalLiquido ?? null),
@@ -76,6 +113,7 @@ export function exportPDF({ empresa, cliente, rows }: ExportContext) {
     styles: { fontSize: 8, cellPadding: 4 },
     headStyles: { fillColor: [27, 78, 168] },
     columnStyles: { 8: { cellWidth: 200 } },
+    didDrawPage: (data) => drawFooter(data.pageNumber),
   });
 
   doc.save(`conferencia-${Date.now()}.pdf`);
