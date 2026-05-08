@@ -54,6 +54,7 @@ Exibir cards clicáveis:
 
 ```text
 Vínculo OK           (850)
+Base inválida           (10)
 Contrato não encontrado (120)
 Nota não encontrada     (90)
 Divergências            (194)
@@ -92,6 +93,7 @@ Valores possíveis:
 
 ```text
 Vínculo OK
+Registro base inválido
 Contrato não encontrado
 Nota não encontrada
 Nota em outro contrato
@@ -109,6 +111,7 @@ Mensagem clara, exemplo:
 Contrato encontrado, mas nota não corresponde
 Placa divergente entre base e cliente
 Múltiplos registros encontrados
+Registro do GRL053 sem contrato cliente válido
 ```
 
 ---

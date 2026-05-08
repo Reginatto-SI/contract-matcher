@@ -3,6 +3,7 @@ import { key, normalizeContrato, normalizeNota, normalizePlaca, toNumber } from 
 
 export type Situacao =
   | "OK"
+  | "REGISTRO_BASE_INVALIDO"
   | "CONTRATO_NAO_ENCONTRADO"
   | "NOTA_NAO_ENCONTRADA"
   | "NOTA_OUTRO_CONTRATO"
@@ -11,6 +12,7 @@ export type Situacao =
 
 export const situacaoLabel: Record<Situacao, string> = {
   OK: "Vínculo OK",
+  REGISTRO_BASE_INVALIDO: "Registro base inválido",
   CONTRATO_NAO_ENCONTRADO: "Contrato não encontrado",
   NOTA_NAO_ENCONTRADA: "Nota não encontrada",
   NOTA_OUTRO_CONTRATO: "Nota vinculada a outro contrato",
@@ -70,33 +72,64 @@ export function parseComp(rows: RawRow[]): CompRow[] {
   }));
 }
 
+export function isValidMatchValue(value: string): boolean {
+  // Na V1, nota/contrato normalizados como "0" não são valores úteis para matching operacional.
+  return value !== "" && value !== "0";
+}
+
+function getBaseInvalidDetail(b: BaseRow): string | null {
+  const hasContrato = isValidMatchValue(b.contratoCliente);
+  const hasNota = isValidMatchValue(b.nota);
+
+  if (hasContrato && hasNota) return null;
+  if (!hasContrato && !hasNota) return "Registro do GRL053 sem contrato cliente e sem nota fiscal válidos.";
+  if (!hasContrato) return "Registro do GRL053 sem contrato cliente válido.";
+  return "Registro do GRL053 sem nota fiscal válida.";
+}
+
 export function match(base: BaseRow[], comp: CompRow[]): MatchedRow[] {
   const byKey = new Map<string, CompRow[]>();
   const byContrato = new Map<string, CompRow[]>();
   const byNota = new Map<string, CompRow[]>();
 
   for (const c of comp) {
+    // Complementar inválido não entra nos índices porque não é apto para matching operacional.
+    if (!isValidMatchValue(c.nrContrOriginal) || !isValidMatchValue(c.numeroNF)) continue;
+
     const k = key(c.nrContrOriginal, c.numeroNF);
-    if (c.nrContrOriginal && c.numeroNF) {
-      if (!byKey.has(k)) byKey.set(k, []);
-      byKey.get(k)!.push(c);
-    }
-    if (c.nrContrOriginal) {
-      if (!byContrato.has(c.nrContrOriginal)) byContrato.set(c.nrContrOriginal, []);
-      byContrato.get(c.nrContrOriginal)!.push(c);
-    }
-    if (c.numeroNF) {
-      if (!byNota.has(c.numeroNF)) byNota.set(c.numeroNF, []);
-      byNota.get(c.numeroNF)!.push(c);
-    }
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k)!.push(c);
+
+    if (!byContrato.has(c.nrContrOriginal)) byContrato.set(c.nrContrOriginal, []);
+    byContrato.get(c.nrContrOriginal)!.push(c);
+
+    if (!byNota.has(c.numeroNF)) byNota.set(c.numeroNF, []);
+    byNota.get(c.numeroNF)!.push(c);
   }
 
   const result: MatchedRow[] = [];
   base.forEach((b, idx) => {
+    const invalidBaseDetail = getBaseInvalidDetail(b);
+
+    // GRL053 é fonte de verdade: linha inválida da base permanece na grid com status próprio.
+    if (invalidBaseDetail) {
+      result.push({
+        id: idx,
+        situacao: "REGISTRO_BASE_INVALIDO",
+        detalhe: invalidBaseDetail,
+        placaDivergente: false,
+        base: b,
+        comp: null,
+        hintsContrato: [],
+        hintsNota: [],
+      });
+      return;
+    }
+
     const k = key(b.contratoCliente, b.nota);
-    const matchesKey = (b.contratoCliente && b.nota && byKey.get(k)) || [];
-    const matchesContrato = (b.contratoCliente && byContrato.get(b.contratoCliente)) || [];
-    const matchesNota = (b.nota && byNota.get(b.nota)) || [];
+    const matchesKey = byKey.get(k) || [];
+    const matchesContrato = byContrato.get(b.contratoCliente) || [];
+    const matchesNota = byNota.get(b.nota) || [];
 
     let situacao: Situacao;
     let detalhe = "";
@@ -155,6 +188,7 @@ export function match(base: BaseRow[], comp: CompRow[]): MatchedRow[] {
 export interface Kpis {
   total: number;
   ok: number;
+  baseInvalida: number;
   contratoNaoEncontrado: number;
   notaNaoEncontrada: number;
   divergencias: number;
@@ -163,12 +197,14 @@ export interface Kpis {
 
 export function computeKpis(rows: MatchedRow[]): Kpis {
   let ok = 0,
+    bi = 0,
     cn = 0,
     nn = 0,
     div = 0,
     alertas = 0;
   for (const r of rows) {
     if (r.situacao === "OK") ok++;
+    else if (r.situacao === "REGISTRO_BASE_INVALIDO") bi++;
     else if (r.situacao === "CONTRATO_NAO_ENCONTRADO") cn++;
     else if (r.situacao === "NOTA_NAO_ENCONTRADA") nn++;
     else if (
@@ -179,5 +215,13 @@ export function computeKpis(rows: MatchedRow[]): Kpis {
       div++;
     if (r.placaDivergente) alertas++;
   }
-  return { total: rows.length, ok, contratoNaoEncontrado: cn, notaNaoEncontrada: nn, divergencias: div, alertas };
+  return {
+    total: rows.length,
+    ok,
+    baseInvalida: bi,
+    contratoNaoEncontrado: cn,
+    notaNaoEncontrada: nn,
+    divergencias: div,
+    alertas,
+  };
 }
