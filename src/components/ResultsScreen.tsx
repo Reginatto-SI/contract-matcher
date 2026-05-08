@@ -8,6 +8,7 @@ import {
   ChevronUp,
   Copy,
   Download,
+  ExternalLink,
   FileSearch,
   FileText,
   FileX,
@@ -18,6 +19,16 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -252,22 +263,60 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
               <ContextChip label="Registros" value={kpis.total.toLocaleString("pt-BR")} accent />
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" className="gap-1.5 shadow-sm">
-                <Download className="h-4 w-4" />
-                Exportar
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => exportExcel({ empresa, cliente, rows: sorted })}>
-                <FileText className="h-4 w-4" /> Excel (.xlsx)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportPDF({ empresa, cliente, rows: sorted })}>
-                <FileText className="h-4 w-4" /> PDF
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            {/* Tutorial visual para orientar o usuário na geração do relatório GRL053 com os filtros aceitos. */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <FileSearch className="h-4 w-4" />
+                  Filtros GRL053
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="grid max-h-[90vh] max-w-6xl grid-rows-[auto,minmax(0,1fr),auto] overflow-hidden">
+                <DialogHeader className="pr-6">
+                  <DialogTitle>Tutorial GRL053 — filtros do relatório base</DialogTitle>
+                  <DialogDescription>
+                    Use esta imagem como referência para gerar o relatório GRL053 com os filtros aceitos pelo sistema.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="min-h-0 overflow-auto rounded-lg border bg-muted/20 p-2">
+                  <img
+                    src="/tutorials/tutorial-grl053.jpeg"
+                    alt="Tutorial visual dos filtros do relatório base GRL053"
+                    className="mx-auto h-auto max-h-[72vh] w-auto max-w-full object-contain"
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" asChild>
+                    <a href="/tutorials/tutorial-grl053.jpeg" target="_blank" rel="noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                      Abrir em tamanho original
+                    </a>
+                  </Button>
+                  <DialogClose asChild>
+                    <Button>Fechar</Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="gap-1.5 shadow-sm">
+                  <Download className="h-4 w-4" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => exportExcel({ empresa, cliente, rows: sorted })}>
+                  <FileText className="h-4 w-4" /> Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPDF({ empresa, cliente, rows: sorted })}>
+                  <FileText className="h-4 w-4" /> PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
         <div className="md:hidden mx-auto max-w-[1400px] px-6 pb-3 flex items-center gap-2 flex-wrap">
           <ContextChip label="Empresa" value={empresa} />
