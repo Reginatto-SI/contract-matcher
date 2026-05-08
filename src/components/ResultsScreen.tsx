@@ -596,7 +596,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                       label="Contrato"
                       baseLabel="Base GRL053 · Contr. Cliente"
                       baseValue={selected.base.contratoCliente}
-                      compLabel="Complementar Inpasa · Nr Contr Original"
+                      compLabel={`Complementar ${cliente} · Contrato cliente`}
                       compValue={selected.comp?.nrContrOriginal}
                       severity="key"
                     />
@@ -604,7 +604,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                       label="Nota Fiscal"
                       baseLabel="Base GRL053 · Nota"
                       baseValue={selected.base.nota}
-                      compLabel="Complementar Inpasa · Número NF"
+                      compLabel={`Complementar ${cliente} · Nota fiscal`}
                       compValue={selected.comp?.numeroNF}
                       severity="key"
                     />
@@ -612,7 +612,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                       label="Placa"
                       baseLabel="Base GRL053 · Placa"
                       baseValue={selected.base.placa}
-                      compLabel="Complementar Inpasa · Placa"
+                      compLabel={`Complementar ${cliente} · Placa`}
                       compValue={selected.comp?.placa}
                       severity="info"
                       note="Apenas alerta informativo; placa não afeta a classificação."
