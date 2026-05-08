@@ -52,8 +52,10 @@ function assertColumns(headers: string[], required: string[], fileLabel: string,
   if (missing.length) {
     const missingText = missing.map((column) => `"${column}"`).join(", ");
     const foundText = headers.length ? headers.join(", ") : "nenhuma coluna encontrada";
+    const missingLabel =
+      missing.length === 1 ? "coluna obrigatória não encontrada" : "colunas obrigatórias não encontradas";
     throw new Error(
-      `${fileLabel}: coluna(s) obrigatória(s) não encontrada(s): ${missingText}. ` +
+      `${fileLabel}: ${missingLabel}: ${missingText}. ` +
         `Aba lida: "${sheetName}". Linha de cabeçalho validada: ${headerRow}. ` +
         `Colunas encontradas: ${foundText}`,
     );

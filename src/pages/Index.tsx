@@ -2,12 +2,14 @@ import { useState } from "react";
 import { UploadScreen } from "@/components/UploadScreen";
 import { ResultsScreen } from "@/components/ResultsScreen";
 import { readXlsx } from "@/lib/parseXlsx";
-import { match, MatchedRow, parseBase, parseComp } from "@/lib/match";
+import { match, MatchedRow, parseBaseWithStats, parseComp } from "@/lib/match";
 
 interface ResultsState {
   empresa: string;
   cliente: string;
   rows: MatchedRow[];
+  baseTotalArquivo: number;
+  baseIgnoradasModalidade: number;
 }
 
 const Index = () => {
@@ -34,7 +36,7 @@ const Index = () => {
           // Regra fixa da V1 (PRD-02/03): GRL053 usa primeira aba e cabeçalho na linha 3.
           // Não substituir por detecção automática sem nova decisão de produto.
           headerRow: 3,
-          requiredColumns: ["PLACA", "CONTRATO", "NOTA", "CONTR. CLIENTE", "APOS DESC"],
+          requiredColumns: ["PLACA", "CONTRATO", "MOD", "NOTA", "CONTR. CLIENTE", "APOS DESC"],
           fileLabel: "Relatório Base (GRL053)",
         }),
         readXlsx(compFile, {
@@ -45,10 +47,16 @@ const Index = () => {
           fileLabel: "Relatório Complementar (Inpasa)",
         }),
       ]);
-      const base = parseBase(baseRaw);
+      const baseImport = parseBaseWithStats(baseRaw);
       const comp = parseComp(compRaw);
-      const rows = match(base, comp);
-      setResults({ empresa: empresa.trim(), cliente: cliente.trim(), rows });
+      const rows = match(baseImport.base, comp);
+      setResults({
+        empresa: empresa.trim(),
+        cliente: cliente.trim(),
+        rows,
+        baseTotalArquivo: baseImport.totalArquivo,
+        baseIgnoradasModalidade: baseImport.ignoradasModalidade,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao processar os arquivos.");
     } finally {
@@ -62,6 +70,8 @@ const Index = () => {
         empresa={results.empresa}
         cliente={results.cliente}
         rows={results.rows}
+        baseTotalArquivo={results.baseTotalArquivo}
+        baseIgnoradasModalidade={results.baseIgnoradasModalidade}
         onReset={() => setResults(null)}
       />
     );

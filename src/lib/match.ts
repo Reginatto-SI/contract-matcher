@@ -23,11 +23,18 @@ export const situacaoLabel: Record<Situacao, string> = {
 export interface BaseRow {
   placa: string;
   contrato: string;
+  modalidade: string;
   nota: string;
   contratoCliente: string;
   chaveAcesso: string;
   aposDesc: number | null;
   raw: RawRow;
+}
+
+export interface ParseBaseResult {
+  base: BaseRow[];
+  totalArquivo: number;
+  ignoradasModalidade: number;
 }
 
 export interface CompRow {
@@ -50,19 +57,47 @@ export interface MatchedRow {
   hintsNota: CompRow[];
 }
 
+export function normalizeModalidade(value: unknown): string {
+  return String(value ?? "").trim().toUpperCase();
+}
+
+export function parseBaseWithStats(rows: RawRow[]): ParseBaseResult {
+  const base: BaseRow[] = [];
+  let ignoradasModalidade = 0;
+
+  rows.forEach((r) => {
+    const modalidade = normalizeModalidade(getCol(r, ["MOD"]));
+
+    // Regra operacional do GRL053: somente expedições (MOD = EXP) entram na conferência e no matching.
+    if (modalidade !== "EXP") {
+      ignoradasModalidade += 1;
+      return;
+    }
+
+    base.push({
+      placa: normalizePlaca(getCol(r, ["PLACA"])),
+      contrato: normalizeContrato(getCol(r, ["CONTRATO"])),
+      modalidade,
+      // No layout GRL053 da V1, a nota fiscal usada no matching vem da primeira coluna "NOTA" (coluna M).
+      // Quando há duplicidade de cabeçalho, o SheetJS mantém a primeira ocorrência como "NOTA" e sufixa as demais.
+      nota: normalizeNota(getCol(r, ["NOTA"])),
+      contratoCliente: normalizeContrato(getCol(r, ["CONTR. CLIENTE", "CONTR CLIENTE", "CONTRATO CLIENTE"])),
+      // A chave de acesso do GRL053 é exibida apenas para conferência manual e não participa do matching da V1.
+      chaveAcesso: String(getCol(r, ["CHAVE DE ACESSO"]) ?? "").trim(),
+      aposDesc: toNumber(getCol(r, ["APOS DESC", "APÓS DESC"])),
+      raw: r,
+    });
+  });
+
+  return {
+    base,
+    totalArquivo: rows.length,
+    ignoradasModalidade,
+  };
+}
+
 export function parseBase(rows: RawRow[]): BaseRow[] {
-  return rows.map((r) => ({
-    placa: normalizePlaca(getCol(r, ["PLACA"])),
-    contrato: normalizeContrato(getCol(r, ["CONTRATO"])),
-    // No layout GRL053 da V1, a nota fiscal usada no matching vem da primeira coluna "NOTA" (coluna M).
-    // Quando há duplicidade de cabeçalho, o SheetJS mantém a primeira ocorrência como "NOTA" e sufixa as demais.
-    nota: normalizeNota(getCol(r, ["NOTA"])),
-    contratoCliente: normalizeContrato(getCol(r, ["CONTR. CLIENTE", "CONTR CLIENTE", "CONTRATO CLIENTE"])),
-    // A chave de acesso do GRL053 é exibida apenas para conferência manual e não participa do matching da V1.
-    chaveAcesso: String(getCol(r, ["CHAVE DE ACESSO"]) ?? "").trim(),
-    aposDesc: toNumber(getCol(r, ["APOS DESC", "APÓS DESC"])),
-    raw: r,
-  }));
+  return parseBaseWithStats(rows).base;
 }
 
 export function parseComp(rows: RawRow[]): CompRow[] {

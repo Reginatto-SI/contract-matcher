@@ -32,6 +32,7 @@ Qualquer outra informação:
 
 ### 3.1 Relatório Base (GRL053)
 
+* MOD (filtro de importação; não participa do vínculo)
 * CONTR. CLIENTE
 * NOTA
 * PLACA (informativo)
@@ -55,8 +56,10 @@ Qualquer outra informação:
 Antes de qualquer comparação:
 
 ```text
-Todos os campos devem ser normalizados
+Todos os campos de vínculo devem ser normalizados
 ```
+
+Antes da normalização de contrato e nota do GRL053, o importador já deve ter descartado linhas cuja modalidade (`MOD`) seja diferente de `EXP`.
 
 ---
 
@@ -143,11 +146,13 @@ chave = contrato_normalizado + "_" + nota_normalizada
 
 ### 5.3 Fluxo
 
-Para cada linha do base:
+Para cada linha do base já filtrada pelo importador (`MOD = EXP`):
 
 1. Normalizar contrato + nota
 2. Buscar no complementar pela chave
 3. Avaliar resultado
+
+O motor de matching deve receber apenas registros base válidos para conferência quanto ao escopo operacional. Ele não deve tentar classificar linhas `FIX`, `DEV`, `REC` ou qualquer outra modalidade diferente de `EXP`, pois essas linhas são movimentos fora do escopo da análise e não representam divergência operacional com o cliente.
 
 ### 5.4 Validade mínima para matching
 
@@ -155,7 +160,7 @@ Na V1, contrato e nota normalizados como vazio ou `0` não são valores úteis p
 
 Registros do complementar sem contrato válido ou sem nota válida não participam dos índices de matching (`contrato + nota`, `contrato` e `nota`).
 
-Registros do GRL053 sem contrato cliente válido ou sem nota válida continuam aparecendo na conferência, pois o GRL053 é a fonte de verdade, mas recebem status próprio de base inválida.
+Registros do GRL053 com `MOD = EXP` sem contrato cliente válido ou sem nota válida continuam aparecendo na conferência, pois são expedições da fonte de verdade, mas recebem status próprio de base inválida. Registros com `MOD` diferente de `EXP` devem ter sido ignorados antes do matching e não recebem status.
 
 ---
 

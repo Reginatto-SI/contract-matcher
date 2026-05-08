@@ -27,10 +27,11 @@ Importar Base
 ```
 
 1. O usuário importa o relatório base GRL053 e informa a empresa/cooperativa.
-2. O usuário importa o relatório complementar do cliente e informa o cliente.
-3. O sistema normaliza os campos necessários e cruza os registros em memória.
-4. A tela de conferência exibe status, detalhe, filtros, KPIs e dados informativos.
-5. O usuário exporta o resultado para Excel/PDF.
+2. O importador do GRL053 considera somente linhas com `MOD = EXP`; demais modalidades são ignoradas antes do matching.
+3. O usuário importa o relatório complementar do cliente e informa o cliente.
+4. O sistema normaliza os campos necessários e cruza os registros analisados em memória.
+5. A tela de conferência exibe status, detalhe, filtros, KPIs e dados informativos.
+6. O usuário exporta o resultado para Excel/PDF.
 
 ---
 
@@ -38,7 +39,7 @@ Importar Base
 
 A V1 suporta apenas os layouts fixos documentados nos PRDs:
 
-- Relatório Base — GRL053, em `.xlsx` ou `.xls`.
+- Relatório Base — GRL053, em `.xlsx` ou `.xls`, com coluna obrigatória `MOD` para filtrar apenas expedições (`EXP`).
 - Relatório Complementar — Inpasa, em `.xlsx` ou `.xls`.
 
 A importação é determinística: não existe DE/PARA, configuração de colunas, fuzzy match ou tentativa inteligente de localizar layouts alternativos. Se a estrutura não bater com o layout esperado, o sistema deve bloquear a importação e informar quais colunas não foram encontradas, incluindo a aba e a linha de cabeçalho validadas quando possível.
@@ -59,6 +60,7 @@ Nr Contr Original + Número NF
 
 Regras obrigatórias:
 
+- **Somente `MOD = EXP` no GRL053 entra na análise.** Outras modalidades são ignoradas antes do matching e não geram “Base inválida”.
 - **Placa não faz parte do vínculo.** Ela pode gerar alerta visual, mas nunca define match.
 - **Peso não gera erro.** Peso fiscal e peso físico são apenas informativos e não devem ser comparados como divergência operacional.
 - **O sistema é determinístico.** O mesmo arquivo de entrada deve produzir o mesmo resultado sempre.
@@ -167,6 +169,7 @@ Estas decisões devem ser preservadas para evitar regressões futuras:
 - Sem histórico.
 - Sem auto correção de dados.
 - Layout fixo e determinístico.
+- GRL053 filtrado por `MOD = EXP` antes do matching.
 
 ---
 

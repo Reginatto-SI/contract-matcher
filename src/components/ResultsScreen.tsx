@@ -21,6 +21,8 @@ interface Props {
   empresa: string;
   cliente: string;
   rows: MatchedRow[];
+  baseTotalArquivo: number;
+  baseIgnoradasModalidade: number;
   onReset: () => void;
 }
 
@@ -44,7 +46,7 @@ const situacaoBadge = (s: Situacao) => {
   return map[s];
 };
 
-export const ResultsScreen = ({ empresa, cliente, rows, onReset }: Props) => {
+export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIgnoradasModalidade, onReset }: Props) => {
   const [filter, setFilter] = useState<FilterKind>("ALL");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -117,7 +119,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, onReset }: Props) => {
               </div>
               <div className="h-4 w-px bg-border" />
               <div>
-                <span className="text-muted-foreground">Registros: </span>
+                <span className="text-muted-foreground">Registros analisados: </span>
                 <span className="font-medium">{kpis.total}</span>
               </div>
             </div>
@@ -142,6 +144,13 @@ export const ResultsScreen = ({ empresa, cliente, rows, onReset }: Props) => {
       </header>
 
       <main className="mx-auto max-w-[1400px] px-6 py-5 space-y-4">
+        <Card className="p-3 text-sm text-muted-foreground">
+          Arquivo GRL053 importado com {baseTotalArquivo} registros. Registros analisados: {kpis.total}.
+          {baseIgnoradasModalidade > 0 && (
+            <span> Foram ignoradas {baseIgnoradasModalidade} linhas por modalidade diferente de EXP.</span>
+          )}
+        </Card>
+
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <KpiCard label="Vínculo OK" value={kpis.ok} active={filter === "OK"} tone="success" onClick={() => setFilterAndReset(filter === "OK" ? "ALL" : "OK")} />
           <KpiCard

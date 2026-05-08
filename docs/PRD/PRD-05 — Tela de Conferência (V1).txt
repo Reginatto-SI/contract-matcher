@@ -35,7 +35,7 @@ Exibir contexto da análise:
 ```text
 Empresa (Base): COOPERATIVA X
 Cliente (Complementar): INPASA
-Total de registros: 1.254
+Registros analisados: 1.254
 ```
 
 ---
@@ -65,6 +65,18 @@ Divergências            (194)
 * Clicar no card → filtra grid
 * Sempre visível
 * Atualiza em tempo real
+* KPIs devem considerar apenas os registros analisados, ou seja, linhas do GRL053 com `MOD = EXP` que entraram no matching.
+* Linhas ignoradas por `MOD` diferente de `EXP` não devem alimentar cards de erro, incluindo “Base inválida”.
+
+---
+
+## 4.1 Resumo técnico opcional da importação
+
+Sem criar tela nova complexa, a tela pode exibir um texto simples de apoio quando houver linhas do GRL053 fora do escopo operacional:
+
+```text
+Foram ignoradas X linhas do GRL053 por modalidade diferente de EXP.
+```
 
 ---
 
