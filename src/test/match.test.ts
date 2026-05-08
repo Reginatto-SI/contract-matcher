@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeKpis, match } from "@/lib/match";
+import { computeKpis, match, parseBase } from "@/lib/match";
 import type { BaseRow, CompRow } from "@/lib/match";
 
 const baseRow = (overrides: Partial<BaseRow> = {}): BaseRow => ({
@@ -7,6 +7,7 @@ const baseRow = (overrides: Partial<BaseRow> = {}): BaseRow => ({
   contrato: "10",
   contratoCliente: "123",
   nota: "456",
+  chaveAcesso: "",
   aposDesc: 100,
   raw: {},
   ...overrides,
@@ -19,6 +20,23 @@ const compRow = (overrides: Partial<CompRow> = {}): CompRow => ({
   totalLiquido: 100,
   raw: {},
   ...overrides,
+});
+
+describe("parseBase", () => {
+  it("lê a chave de acesso informativa do GRL053 pela coluna CHAVE DE ACESSO", () => {
+    const [row] = parseBase([
+      {
+        PLACA: "ABC1234",
+        CONTRATO: "10",
+        NOTA: "456",
+        "CONTR. CLIENTE": "123",
+        "CHAVE DE ACESSO": " 35123456789012345678901234567890123456789012 ",
+        "APOS DESC": 100,
+      },
+    ]);
+
+    expect(row.chaveAcesso).toBe("35123456789012345678901234567890123456789012");
+  });
 });
 
 describe("match", () => {

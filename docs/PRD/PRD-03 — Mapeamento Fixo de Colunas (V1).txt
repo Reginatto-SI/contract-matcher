@@ -40,6 +40,7 @@ Na V1, o GRL053 deve ser lido na primeira aba do arquivo, com cabeçalho fixo na
 | data_emissao     | DATA ROMANEIO     | data   | Informativo         |
 | nota             | NOTA              | texto  | Vínculo             |
 | peso_fiscal      | APOS DESC         | número | Informativo         |
+| chave_acesso     | CHAVE DE ACESSO   | texto  | Informativo (chNFe; coluna N do GRL053; não participa do matching da V1) |
 | contrato_cliente | CONTR. CLIENTE    | texto  | Vínculo (principal) |
 | observacao       | OBSERVAÇÃO NF     | texto  | Informativo         |
 
