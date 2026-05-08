@@ -50,8 +50,10 @@ A importação deve ser rápida, determinística e sem necessidade de configura�
 Usuário deve:
 
 1. Selecionar arquivo
-2. Informar:
+2. Conferir ou informar manualmente:
    - **Empresa/Cooperativa**
+
+Ao selecionar o GRL053, o sistema pode preencher a empresa automaticamente a partir da coluna `EMPRESA`. O campo continua editável e, se não houver valor detectável, o usuário deve conseguir preencher manualmente.
 
 Após isso:
 
@@ -66,9 +68,9 @@ Sistema valida estrutura → carrega dados em memória
 Usuário deve:
 
 1. Selecionar arquivo
-2. Informar:
+2. Selecionar cliente em lista fixa de layouts suportados:
 
-   * **Cliente (ex: Inpasa)**
+   * **Inpasa** (pré-selecionado na V1)
 
 Após isso:
 
@@ -109,6 +111,7 @@ Observação:
 * Os nomes devem bater exatamente com o layout esperado
 * Não haverá mapeamento dinâmico
 * A coluna `MOD` é obrigatória para garantir que a análise considere somente expedições.
+* A coluna `EMPRESA`, quando existir, é informativa para preencher o contexto da análise e não participa do matching.
 
 Regra operacional do GRL053:
 
@@ -116,6 +119,7 @@ Regra operacional do GRL053:
 * O valor de `MOD` deve ser convertido para texto, ter espaços removidos no início/fim e ser comparado em maiúsculo.
 * Linhas com `MOD` diferente de `EXP` devem ser ignoradas antes do matching.
 * Linhas ignoradas por modalidade diferente de `EXP` não devem gerar status de erro, base inválida, contrato não encontrado ou nota não encontrada.
+* Para identificar a empresa automaticamente, considerar preferencialmente linhas aptas (`MOD = EXP`) e o primeiro valor não vazio de `EMPRESA`; se houver múltiplas empresas distintas, avisar o usuário para conferência.
 * Se a coluna `MOD` não existir, a importação deve falhar com erro claro, pois o sistema não pode garantir que está analisando apenas expedições.
 
 Mensagem esperada quando apenas `MOD` estiver ausente:
@@ -211,6 +215,7 @@ Exemplo:
 ## 7. Armazenamento (V1)
 
 * Dados armazenados apenas em memória (estado da aplicação)
+* O cliente complementar vem de lista fixa de layouts suportados no código; não é cadastro dinâmico.
 * Estrutura sugerida:
 
 ```ts
@@ -241,7 +246,7 @@ Exemplo:
 
 ### Após importar base:
 
-* Indicar empresa carregada
+* Indicar empresa carregada ou identificada automaticamente pelo GRL053
 * Aguardar complementar
 
 ### Após importar complementar:
@@ -277,7 +282,7 @@ Erro ao importar: coluna "NOTA" não encontrada
 
 ## 11. Não Objetivos (V1)
 
-* Não suportar múltiplos layouts
+* Não suportar múltiplos layouts livres ou configuráveis pelo usuário
 * Não salvar histórico de importação
 * Não validar regras de negócio aqui (isso é PRD-04)
 * Não permitir edição manual de dados

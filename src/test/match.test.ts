@@ -1,8 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { computeKpis, match, parseBase, parseBaseWithStats } from "@/lib/match";
+import {
+  computeKpis,
+  detectEmpresaFromGrl053,
+  match,
+  normalizeEmpresaDisplay,
+  parseBase,
+  parseBaseWithStats,
+} from "@/lib/match";
 import type { BaseRow, CompRow } from "@/lib/match";
 import { dataEmissaoToTime, formatDataEmissao } from "@/lib/normalize";
 import { sortMatchedRows } from "@/components/ResultsScreen";
+import {
+  CLIENTES_SUPORTADOS,
+  DEFAULT_CLIENTE_ID,
+  getClienteSuportado,
+} from "@/lib/layouts";
 
 const baseRow = (overrides: Partial<BaseRow> = {}): BaseRow => ({
   placa: "ABC1234",
@@ -26,12 +38,54 @@ const compRow = (overrides: Partial<CompRow> = {}): CompRow => ({
   ...overrides,
 });
 
+describe("layouts fixos de clientes", () => {
+  it("mantém Inpasa como cliente padrão da V1", () => {
+    const cliente = getClienteSuportado(DEFAULT_CLIENTE_ID);
+
+    expect(cliente.label).toBe("Inpasa");
+    expect(CLIENTES_SUPORTADOS.map((item) => item.label)).toEqual(["Inpasa"]);
+  });
+
+  it("mantém as colunas obrigatórias do layout complementar Inpasa", () => {
+    const cliente = getClienteSuportado("inpasa");
+
+    expect(cliente.headerRow).toBe(2);
+    expect(cliente.requiredColumns).toEqual([
+      "Placa",
+      "Número NF",
+      "Nr Contr Original",
+      "Total Líquido",
+    ]);
+  });
+});
+
 describe("parseBase", () => {
   it("ignora linhas do GRL053 com modalidade diferente de EXP antes do matching", () => {
     const result = parseBaseWithStats([
-      { PLACA: "ABC1234", CONTRATO: "10", MOD: " exp ", NOTA: "456", "CONTR. CLIENTE": "123", "APOS DESC": 100 },
-      { PLACA: "DEF5678", CONTRATO: "11", MOD: "FIX", NOTA: "0", "CONTR. CLIENTE": "999", "APOS DESC": 50 },
-      { PLACA: "GHI9012", CONTRATO: "12", MOD: "DEV", NOTA: "", "CONTR. CLIENTE": "888", "APOS DESC": 20 },
+      {
+        PLACA: "ABC1234",
+        CONTRATO: "10",
+        MOD: " exp ",
+        NOTA: "456",
+        "CONTR. CLIENTE": "123",
+        "APOS DESC": 100,
+      },
+      {
+        PLACA: "DEF5678",
+        CONTRATO: "11",
+        MOD: "FIX",
+        NOTA: "0",
+        "CONTR. CLIENTE": "999",
+        "APOS DESC": 50,
+      },
+      {
+        PLACA: "GHI9012",
+        CONTRATO: "12",
+        MOD: "DEV",
+        NOTA: "",
+        "CONTR. CLIENTE": "888",
+        "APOS DESC": 20,
+      },
     ]);
 
     expect(result.totalArquivo).toBe(3);
@@ -69,13 +123,67 @@ describe("parseBase", () => {
       },
     ]);
 
-    expect(row.chaveAcesso).toBe("35123456789012345678901234567890123456789012");
+    expect(row.chaveAcesso).toBe(
+      "35123456789012345678901234567890123456789012",
+    );
+  });
+});
+
+describe("empresa do GRL053", () => {
+  it("captura a primeira EMPRESA de linhas EXP e remove prefixo numérico simples", () => {
+    const result = detectEmpresaFromGrl053([
+      { MOD: "FIX", EMPRESA: "2 - EMPRESA IGNORADA" },
+      {
+        MOD: "EXP",
+        EMPRESA:
+          " 1 - COOPERATIVA AGROPECUARIA DE NOVA MUTUM COOPERAGRO MUTUM ",
+      },
+    ]);
+
+    expect(result).toEqual({
+      empresa: "COOPERATIVA AGROPECUARIA DE NOVA MUTUM COOPERAGRO MUTUM",
+      multiplas: false,
+    });
+  });
+
+  it("informa ausência de empresa detectável sem impedir preenchimento manual", () => {
+    expect(detectEmpresaFromGrl053([{ MOD: "EXP", EMPRESA: " " }])).toEqual({
+      empresa: "",
+      multiplas: false,
+    });
+  });
+
+  it("sinaliza múltiplas empresas diferentes no GRL053", () => {
+    expect(
+      detectEmpresaFromGrl053([
+        { MOD: "EXP", EMPRESA: "1 - COOPERATIVA A" },
+        { MOD: "EXP", EMPRESA: "2 - COOPERATIVA B" },
+      ]),
+    ).toEqual({ empresa: "COOPERATIVA A", multiplas: true });
+  });
+
+  it("não usa EMPRESA na chave de matching", () => {
+    const [row] = match(
+      [baseRow({ raw: { EMPRESA: "1 - COOPERATIVA A" } })],
+      [compRow({ raw: { EMPRESA: "2 - COOPERATIVA B" } })],
+    );
+
+    expect(row.situacao).toBe("OK");
+  });
+
+  it("normaliza somente espaços e prefixo numérico para exibição", () => {
+    expect(normalizeEmpresaDisplay(" 1 -  COOPERATIVA   TESTE ")).toBe(
+      "COOPERATIVA TESTE",
+    );
   });
 });
 
 describe("match", () => {
   it("ignora complementar sem contrato nos índices operacionais", () => {
-    const [row] = match([baseRow({ contratoCliente: "123", nota: "456" })], [compRow({ nrContrOriginal: "" })]);
+    const [row] = match(
+      [baseRow({ contratoCliente: "123", nota: "456" })],
+      [compRow({ nrContrOriginal: "" })],
+    );
 
     expect(row.situacao).toBe("CONTRATO_NAO_ENCONTRADO");
     expect(row.comp).toBeNull();
@@ -84,7 +192,10 @@ describe("match", () => {
   });
 
   it("ignora complementar sem nota nos índices operacionais", () => {
-    const [row] = match([baseRow({ contratoCliente: "123", nota: "456" })], [compRow({ numeroNF: "" })]);
+    const [row] = match(
+      [baseRow({ contratoCliente: "123", nota: "456" })],
+      [compRow({ numeroNF: "" })],
+    );
 
     expect(row.situacao).toBe("CONTRATO_NAO_ENCONTRADO");
     expect(row.comp).toBeNull();
@@ -93,14 +204,20 @@ describe("match", () => {
   });
 
   it("ignora complementar com contrato zero nos índices operacionais", () => {
-    const [row] = match([baseRow({ contratoCliente: "123", nota: "456" })], [compRow({ nrContrOriginal: "0" })]);
+    const [row] = match(
+      [baseRow({ contratoCliente: "123", nota: "456" })],
+      [compRow({ nrContrOriginal: "0" })],
+    );
 
     expect(row.situacao).toBe("CONTRATO_NAO_ENCONTRADO");
     expect(row.comp).toBeNull();
   });
 
   it("ignora complementar com nota zero nos índices operacionais", () => {
-    const [row] = match([baseRow({ contratoCliente: "123", nota: "456" })], [compRow({ numeroNF: "0" })]);
+    const [row] = match(
+      [baseRow({ contratoCliente: "123", nota: "456" })],
+      [compRow({ numeroNF: "0" })],
+    );
 
     expect(row.situacao).toBe("CONTRATO_NAO_ENCONTRADO");
     expect(row.comp).toBeNull();
@@ -147,8 +264,14 @@ describe("match", () => {
 
   it("mantém o total da grid derivado da quantidade de linhas da base", () => {
     const rows = match(
-      [baseRow({ contratoCliente: "123", nota: "456" }), baseRow({ contratoCliente: "789", nota: "999" })],
-      [compRow({ nrContrOriginal: "123", numeroNF: "456" }), compRow({ nrContrOriginal: "", numeroNF: "999" })],
+      [
+        baseRow({ contratoCliente: "123", nota: "456" }),
+        baseRow({ contratoCliente: "789", nota: "999" }),
+      ],
+      [
+        compRow({ nrContrOriginal: "123", numeroNF: "456" }),
+        compRow({ nrContrOriginal: "", numeroNF: "999" }),
+      ],
     );
     const kpis = computeKpis(rows);
 
@@ -169,8 +292,12 @@ describe("data emissão", () => {
   });
 
   it("gera valor temporal real para ordenação de data", () => {
-    expect(dataEmissaoToTime("01/05/2025")).toBeLessThan(dataEmissaoToTime("10/05/2025")!);
-    expect(dataEmissaoToTime("10/05/2025")).toBeLessThan(dataEmissaoToTime("02/06/2025")!);
+    expect(dataEmissaoToTime("01/05/2025")).toBeLessThan(
+      dataEmissaoToTime("10/05/2025")!,
+    );
+    expect(dataEmissaoToTime("10/05/2025")).toBeLessThan(
+      dataEmissaoToTime("02/06/2025")!,
+    );
   });
 });
 
@@ -178,9 +305,27 @@ describe("sortMatchedRows", () => {
   it("ordena nota numericamente", () => {
     const sorted = sortMatchedRows(
       [
-        { ...match([baseRow({ nota: "1000" })], [compRow({ numeroNF: "1000" })])[0], id: 1 },
-        { ...match([baseRow({ nota: "999" })], [compRow({ numeroNF: "999" })])[0], id: 2 },
-        { ...match([baseRow({ nota: "1001" })], [compRow({ numeroNF: "1001" })])[0], id: 3 },
+        {
+          ...match(
+            [baseRow({ nota: "1000" })],
+            [compRow({ numeroNF: "1000" })],
+          )[0],
+          id: 1,
+        },
+        {
+          ...match(
+            [baseRow({ nota: "999" })],
+            [compRow({ numeroNF: "999" })],
+          )[0],
+          id: 2,
+        },
+        {
+          ...match(
+            [baseRow({ nota: "1001" })],
+            [compRow({ numeroNF: "1001" })],
+          )[0],
+          id: 3,
+        },
       ],
       { key: "nota", direction: "asc" },
     );
@@ -190,46 +335,94 @@ describe("sortMatchedRows", () => {
 
   it("ordena peso numericamente e mantém vazios ao final em ordem decrescente", () => {
     const rows = [
-      { ...match([baseRow({ aposDesc: null, nota: "1" })], [compRow({ numeroNF: "1" })])[0], id: 1 },
-      { ...match([baseRow({ aposDesc: 2, nota: "2" })], [compRow({ numeroNF: "2" })])[0], id: 2 },
-      { ...match([baseRow({ aposDesc: 10, nota: "3" })], [compRow({ numeroNF: "3" })])[0], id: 3 },
+      {
+        ...match(
+          [baseRow({ aposDesc: null, nota: "1" })],
+          [compRow({ numeroNF: "1" })],
+        )[0],
+        id: 1,
+      },
+      {
+        ...match(
+          [baseRow({ aposDesc: 2, nota: "2" })],
+          [compRow({ numeroNF: "2" })],
+        )[0],
+        id: 2,
+      },
+      {
+        ...match(
+          [baseRow({ aposDesc: 10, nota: "3" })],
+          [compRow({ numeroNF: "3" })],
+        )[0],
+        id: 3,
+      },
     ];
 
-    expect(sortMatchedRows(rows, { key: "pesoFiscal", direction: "asc" }).map((row) => row.base.aposDesc)).toEqual([
-      2,
-      10,
-      null,
-    ]);
-    expect(sortMatchedRows(rows, { key: "pesoFiscal", direction: "desc" }).map((row) => row.base.aposDesc)).toEqual([
-      10,
-      2,
-      null,
-    ]);
+    expect(
+      sortMatchedRows(rows, { key: "pesoFiscal", direction: "asc" }).map(
+        (row) => row.base.aposDesc,
+      ),
+    ).toEqual([2, 10, null]);
+    expect(
+      sortMatchedRows(rows, { key: "pesoFiscal", direction: "desc" }).map(
+        (row) => row.base.aposDesc,
+      ),
+    ).toEqual([10, 2, null]);
   });
 
   it("ordena data por valor real e preserva valores inválidos ao final", () => {
     const rows = [
-      { ...match([baseRow({ data_emissao: "02/06/2025", nota: "1" })], [compRow({ numeroNF: "1" })])[0], id: 1 },
-      { ...match([baseRow({ data_emissao: "01/05/2025", nota: "2" })], [compRow({ numeroNF: "2" })])[0], id: 2 },
-      { ...match([baseRow({ data_emissao: "inválida", nota: "3" })], [compRow({ numeroNF: "3" })])[0], id: 3 },
-      { ...match([baseRow({ data_emissao: "10/05/2025", nota: "4" })], [compRow({ numeroNF: "4" })])[0], id: 4 },
+      {
+        ...match(
+          [baseRow({ data_emissao: "02/06/2025", nota: "1" })],
+          [compRow({ numeroNF: "1" })],
+        )[0],
+        id: 1,
+      },
+      {
+        ...match(
+          [baseRow({ data_emissao: "01/05/2025", nota: "2" })],
+          [compRow({ numeroNF: "2" })],
+        )[0],
+        id: 2,
+      },
+      {
+        ...match(
+          [baseRow({ data_emissao: "inválida", nota: "3" })],
+          [compRow({ numeroNF: "3" })],
+        )[0],
+        id: 3,
+      },
+      {
+        ...match(
+          [baseRow({ data_emissao: "10/05/2025", nota: "4" })],
+          [compRow({ numeroNF: "4" })],
+        )[0],
+        id: 4,
+      },
     ];
 
-    expect(sortMatchedRows(rows, { key: "data_emissao", direction: "asc" }).map((row) => formatDataEmissao(row.base.data_emissao))).toEqual([
-      "01/05/2025",
-      "10/05/2025",
-      "02/06/2025",
-      "—",
-    ]);
+    expect(
+      sortMatchedRows(rows, { key: "data_emissao", direction: "asc" }).map(
+        (row) => formatDataEmissao(row.base.data_emissao),
+      ),
+    ).toEqual(["01/05/2025", "10/05/2025", "02/06/2025", "—"]);
   });
 
   it("ordena depois da lista já filtrada sem incluir registros externos ao filtro", () => {
     const rows = match(
-      [baseRow({ nota: "1001" }), baseRow({ nota: "999", contratoCliente: "999" })],
+      [
+        baseRow({ nota: "1001" }),
+        baseRow({ nota: "999", contratoCliente: "999" }),
+      ],
       [compRow({ numeroNF: "1001" })],
     );
     const filtered = rows.filter((row) => row.situacao === "OK");
 
-    expect(sortMatchedRows(filtered, { key: "nota", direction: "asc" }).map((row) => row.situacao)).toEqual(["OK"]);
+    expect(
+      sortMatchedRows(filtered, { key: "nota", direction: "asc" }).map(
+        (row) => row.situacao,
+      ),
+    ).toEqual(["OK"]);
   });
 });

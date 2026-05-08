@@ -1,5 +1,11 @@
 import { getCol, RawRow } from "./parseXlsx";
-import { key, normalizeContrato, normalizeNota, normalizePlaca, toNumber } from "./normalize";
+import {
+  key,
+  normalizeContrato,
+  normalizeNota,
+  normalizePlaca,
+  toNumber,
+} from "./normalize";
 
 export type Situacao =
   | "OK"
@@ -59,7 +65,40 @@ export interface MatchedRow {
 }
 
 export function normalizeModalidade(value: unknown): string {
-  return String(value ?? "").trim().toUpperCase();
+  return String(value ?? "")
+    .trim()
+    .toUpperCase();
+}
+
+export interface EmpresaDetectionResult {
+  empresa: string;
+  multiplas: boolean;
+}
+
+export function normalizeEmpresaDisplay(value: unknown): string {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^\d+\s*-\s*/, "");
+}
+
+export function detectEmpresaFromGrl053(
+  rows: RawRow[],
+): EmpresaDetectionResult {
+  const validasExp = rows.filter(
+    (r) => normalizeModalidade(getCol(r, ["MOD"])) === "EXP",
+  );
+  const rowsParaAnalise = validasExp.length > 0 ? validasExp : rows;
+  const empresas = rowsParaAnalise
+    .map((r) => normalizeEmpresaDisplay(getCol(r, ["EMPRESA"])))
+    .filter((empresa) => empresa.length > 0);
+
+  const unicas = Array.from(new Set(empresas));
+
+  return {
+    empresa: unicas[0] ?? "",
+    multiplas: unicas.length > 1,
+  };
 }
 
 export function parseBaseWithStats(rows: RawRow[]): ParseBaseResult {
@@ -82,7 +121,9 @@ export function parseBaseWithStats(rows: RawRow[]): ParseBaseResult {
       // No layout GRL053 da V1, a nota fiscal usada no matching vem da primeira coluna "NOTA" (coluna M).
       // Quando há duplicidade de cabeçalho, o SheetJS mantém a primeira ocorrência como "NOTA" e sufixa as demais.
       nota: normalizeNota(getCol(r, ["NOTA"])),
-      contratoCliente: normalizeContrato(getCol(r, ["CONTR. CLIENTE", "CONTR CLIENTE", "CONTRATO CLIENTE"])),
+      contratoCliente: normalizeContrato(
+        getCol(r, ["CONTR. CLIENTE", "CONTR CLIENTE", "CONTRATO CLIENTE"]),
+      ),
       // A chave de acesso do GRL053 é exibida apenas para conferência manual e não participa do matching da V1.
       chaveAcesso: String(getCol(r, ["CHAVE DE ACESSO"]) ?? "").trim(),
       // DATA ROMANEIO é informativa para tela/exportação; não entra na chave, status ou divergências.
@@ -106,8 +147,16 @@ export function parseBase(rows: RawRow[]): BaseRow[] {
 export function parseComp(rows: RawRow[]): CompRow[] {
   return rows.map((r) => ({
     placa: normalizePlaca(getCol(r, ["Placa"])),
-    numeroNF: normalizeNota(getCol(r, ["Número NF", "Numero NF", "Nº NF", "Nr NF"])),
-    nrContrOriginal: normalizeContrato(getCol(r, ["Nr Contr Original", "Nro Contr Original", "Numero Contr Original"])),
+    numeroNF: normalizeNota(
+      getCol(r, ["Número NF", "Numero NF", "Nº NF", "Nr NF"]),
+    ),
+    nrContrOriginal: normalizeContrato(
+      getCol(r, [
+        "Nr Contr Original",
+        "Nro Contr Original",
+        "Numero Contr Original",
+      ]),
+    ),
     totalLiquido: toNumber(getCol(r, ["Total Líquido", "Total Liquido"])),
     raw: r,
   }));
@@ -123,7 +172,8 @@ function getBaseInvalidDetail(b: BaseRow): string | null {
   const hasNota = isValidMatchValue(b.nota);
 
   if (hasContrato && hasNota) return null;
-  if (!hasContrato && !hasNota) return "Registro do GRL053 sem contrato cliente e sem nota fiscal válidos.";
+  if (!hasContrato && !hasNota)
+    return "Registro do GRL053 sem contrato cliente e sem nota fiscal válidos.";
   if (!hasContrato) return "Registro do GRL053 sem contrato cliente válido.";
   return "Registro do GRL053 sem nota fiscal válida.";
 }
@@ -135,13 +185,15 @@ export function match(base: BaseRow[], comp: CompRow[]): MatchedRow[] {
 
   for (const c of comp) {
     // Complementar inválido não entra nos índices porque não é apto para matching operacional.
-    if (!isValidMatchValue(c.nrContrOriginal) || !isValidMatchValue(c.numeroNF)) continue;
+    if (!isValidMatchValue(c.nrContrOriginal) || !isValidMatchValue(c.numeroNF))
+      continue;
 
     const k = key(c.nrContrOriginal, c.numeroNF);
     if (!byKey.has(k)) byKey.set(k, []);
     byKey.get(k)!.push(c);
 
-    if (!byContrato.has(c.nrContrOriginal)) byContrato.set(c.nrContrOriginal, []);
+    if (!byContrato.has(c.nrContrOriginal))
+      byContrato.set(c.nrContrOriginal, []);
     byContrato.get(c.nrContrOriginal)!.push(c);
 
     if (!byNota.has(c.numeroNF)) byNota.set(c.numeroNF, []);
@@ -209,7 +261,12 @@ export function match(base: BaseRow[], comp: CompRow[]): MatchedRow[] {
       // o detalhe acima já é suficiente.
     }
 
-    const placaDivergente = !!(comp && b.placa && comp.placa && b.placa !== comp.placa);
+    const placaDivergente = !!(
+      comp &&
+      b.placa &&
+      comp.placa &&
+      b.placa !== comp.placa
+    );
 
     result.push({
       id: idx,

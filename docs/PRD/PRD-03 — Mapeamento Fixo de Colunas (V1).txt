@@ -44,6 +44,7 @@ Na V1, o GRL053 deve ser lido na primeira aba do arquivo, com cabeçalho fixo na
 | chave_acesso     | CHAVE DE ACESSO   | texto  | Informativo (chNFe; coluna N do GRL053; não participa do matching da V1) |
 | contrato_cliente | CONTR. CLIENTE    | texto  | Vínculo (principal) |
 | observacao       | OBSERVAÇÃO NF     | texto  | Informativo         |
+| empresa          | EMPRESA           | texto  | Informativo (contexto da análise; não participa do matching) |
 
 ### 3.2 Regra operacional da coluna MOD
 
@@ -61,7 +62,7 @@ Regras:
 
 ### 4.0 Localização fixa do cabeçalho
 
-Na V1, o relatório complementar Inpasa deve ser lido na primeira aba do arquivo, com cabeçalho fixo na linha 2.
+Na V1, o relatório complementar Inpasa deve ser lido na primeira aba do arquivo, com cabeçalho fixo na linha 2. O cliente é escolhido por uma lista fixa de layouts suportados no código; nesta versão, somente Inpasa está disponível.
 
 ### 4.1 Colunas utilizadas
 
@@ -108,6 +109,7 @@ A coluna `modalidade` / `MOD` não é campo de vínculo.
 - contrato interno
 - data
 - observações
+- empresa/cooperativa (`EMPRESA` do GRL053)
 ```
 
 ---
@@ -169,6 +171,7 @@ Cada arquivo deve conter:
 * Não permitir edição de colunas
 * Não permitir renomeação
 * Não suportar múltiplos layouts por cliente
+* Não criar cadastro dinâmico de clientes/layouts
 * Não usar aliases dinâmicos
 
 ---
