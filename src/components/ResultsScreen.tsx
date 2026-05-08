@@ -554,6 +554,13 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                     <Field label="Após Desc (peso fiscal)" value={fmtNum(selected.base.aposDesc)} />
                     <Field label="Total Líquido (peso físico)" value={fmtNum(selected.comp?.totalLiquido ?? null)} />
                     <div className="col-span-2">
+                      <dt className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Observação da NF</dt>
+                      {/* Campo informativo do GRL053/GRL019; não participa do matching. */}
+                      <dd className="mt-1 rounded-md border border-border/60 bg-card p-2 text-xs leading-relaxed whitespace-pre-wrap break-words">
+                        {selected.base.observacaoNF || "Não informado"}
+                      </dd>
+                    </div>
+                    <div className="col-span-2">
                       <dt className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Chave de acesso (GRL053)</dt>
                       <dd className="font-mono text-xs mt-1 flex items-center gap-2 break-all">
                         <span>{selected.base.chaveAcesso || "—"}</span>

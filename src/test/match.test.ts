@@ -24,6 +24,7 @@ const baseRow = (overrides: Partial<BaseRow> = {}): BaseRow => ({
   nota: "456",
   chaveAcesso: "",
   data_emissao: "09/06/2025",
+  observacaoNF: "",
   aposDesc: 100,
   raw: {},
   ...overrides,
@@ -108,6 +109,36 @@ describe("parseBase", () => {
     ]);
 
     expect(row.data_emissao).toBe("09/06/2025 15:02");
+  });
+
+  it("captura OBSERVAÇÃO NF como observacaoNF informativa do GRL053", () => {
+    const [row] = parseBase([
+      {
+        PLACA: "ABC1234",
+        CONTRATO: "10",
+        MOD: "EXP",
+        NOTA: "456",
+        "CONTR. CLIENTE": "123",
+        "OBSERVAÇÃO NF": "  Ref. NF produtor 123\nFazenda Modelo  ",
+        "APOS DESC": 100,
+      },
+    ]);
+
+    expect(row.observacaoNF).toBe("Ref. NF produtor 123\nFazenda Modelo");
+  });
+
+  it("mantém OBSERVAÇÃO NF fora da regra de matching", () => {
+    const [comObservacao] = match(
+      [baseRow({ observacaoNF: "texto operacional diferente" })],
+      [compRow()],
+    );
+    const [semObservacao] = match(
+      [baseRow({ observacaoNF: "" })],
+      [compRow()],
+    );
+
+    expect(comObservacao.situacao).toBe("OK");
+    expect(semObservacao.situacao).toBe("OK");
   });
 
   it("lê a chave de acesso informativa do GRL053 pela coluna CHAVE DE ACESSO", () => {
