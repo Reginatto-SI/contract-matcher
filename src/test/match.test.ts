@@ -1,3 +1,4 @@
+import * as XLSX from "xlsx";
 import { describe, expect, it } from "vitest";
 import {
   computeKpis,
@@ -6,6 +7,7 @@ import {
   normalizeEmpresaDisplay,
   parseBase,
   parseBaseWithStats,
+  parseComp,
 } from "@/lib/match";
 import type { BaseRow, CompRow } from "@/lib/match";
 import { dataEmissaoToTime, formatDataEmissao } from "@/lib/normalize";
@@ -15,6 +17,7 @@ import {
   DEFAULT_CLIENTE_ID,
   getClienteSuportado,
 } from "@/lib/layouts";
+import { readXlsx } from "@/lib/parseXlsx";
 
 const baseRow = (overrides: Partial<BaseRow> = {}): BaseRow => ({
   placa: "ABC1234",
@@ -45,7 +48,10 @@ describe("layouts fixos de clientes", () => {
     const cliente = getClienteSuportado(DEFAULT_CLIENTE_ID);
 
     expect(cliente.label).toBe("Inpasa");
-    expect(CLIENTES_SUPORTADOS.map((item) => item.label)).toEqual(["Inpasa"]);
+    expect(CLIENTES_SUPORTADOS.map((item) => item.label)).toEqual([
+      "Inpasa",
+      "FS",
+    ]);
   });
 
   it("mantém as colunas obrigatórias do layout complementar Inpasa", () => {
@@ -58,6 +64,47 @@ describe("layouts fixos de clientes", () => {
       "Nr Contr Original",
       "Total Líquido",
     ]);
+  });
+
+  it("mantém as colunas obrigatórias do layout complementar FS", () => {
+    const cliente = getClienteSuportado("fs");
+
+    expect(cliente.headerRow).toBe(2);
+    expect(cliente.requiredColumns).toEqual([
+      "Placa Caminhão",
+      "Nº Nota Fiscal",
+      "Peso Líquido",
+      "Pedido",
+    ]);
+  });
+
+  it("bloqueia importação FS quando coluna obrigatória está ausente", async () => {
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ["linha antes do cabeçalho"],
+      ["Placa Caminhão", "Nº Nota Fiscal", "Peso Líquido"],
+      ["ABC1234", "456", 100],
+    ]);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "FS Entrada");
+    const buffer = XLSX.write(workbook, { type: "array", bookType: "xlsx" });
+    const file = new File([buffer], "fs.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const cliente = getClienteSuportado("fs");
+
+    await expect(
+      readXlsx(file, {
+        headerRow: cliente.headerRow,
+        requiredColumns: cliente.requiredColumns,
+        fileLabel: `Relatório Complementar (${cliente.label})`,
+      }),
+    ).rejects.toThrow(
+      [
+        'Relatório Complementar (FS): coluna obrigatória não encontrada: "Pedido".',
+        'Aba lida: "FS Entrada". Linha de cabeçalho validada: 2.',
+        'Colunas encontradas: Placa Caminhão, Nº Nota Fiscal, Peso Líquido',
+      ].join(" "),
+    );
   });
 });
 
@@ -175,6 +222,47 @@ describe("parseBase", () => {
     expect(row.chaveAcesso).toBe(
       "35123456789012345678901234567890123456789012",
     );
+  });
+});
+
+describe("parseComp FS", () => {
+  it("mapeia Pedido, Nº Nota Fiscal, Placa Caminhão e Peso Líquido para campos internos", () => {
+    const [row] = parseComp(
+      [
+        {
+          Pedido: " MTP 00123 ",
+          "Nº Nota Fiscal": " NF 000456 ",
+          "Placa Caminhão": " abc-1d23 ",
+          "Peso Líquido": "1.234,50",
+        },
+      ],
+      "fs",
+    );
+
+    expect(row).toMatchObject({
+      nrContrOriginal: "123",
+      numeroNF: "456",
+      placa: "ABC1D23",
+      totalLiquido: 1234.5,
+    });
+  });
+
+  it("preserva o parsing Inpasa existente", () => {
+    const [row] = parseComp([
+      {
+        "Nr Contr Original": "MTP 00123",
+        "Número NF": "000456",
+        Placa: "ABC1234",
+        "Total Líquido": "100,5",
+      },
+    ]);
+
+    expect(row).toMatchObject({
+      nrContrOriginal: "123",
+      numeroNF: "456",
+      placa: "ABC1234",
+      totalLiquido: 100.5,
+    });
   });
 });
 
@@ -309,6 +397,48 @@ describe("match", () => {
 
     expect(row.situacao).toBe("OK");
     expect(row.comp).toEqual(compRow());
+  });
+
+  it("cruza GRL053 CONTR. CLIENTE + NOTA com FS Pedido + Nº Nota Fiscal", () => {
+    const fsComp = parseComp(
+      [
+        {
+          Pedido: "PED 00123",
+          "Nº Nota Fiscal": "NF-000456",
+          "Placa Caminhão": "ZZZ9999",
+          "Peso Líquido": 999,
+        },
+      ],
+      "fs",
+    );
+
+    const [row] = match([baseRow({ placa: "ABC1234", aposDesc: 100 })], fsComp);
+
+    expect(row.situacao).toBe("OK");
+    expect(row.placaDivergente).toBe(true);
+    expect(row.comp?.nrContrOriginal).toBe("123");
+    expect(row.comp?.numeroNF).toBe("456");
+  });
+
+  it("não usa placa nem peso da FS para definir vínculo ou divergência principal", () => {
+    const fsComp = parseComp(
+      [
+        {
+          Pedido: "123",
+          "Nº Nota Fiscal": "456",
+          "Placa Caminhão": "ZZZ9999",
+          "Peso Líquido": 999,
+        },
+      ],
+      "fs",
+    );
+    const [row] = match([baseRow({ placa: "ABC1234", aposDesc: 100 })], fsComp);
+    const kpis = computeKpis([row]);
+
+    expect(row.situacao).toBe("OK");
+    expect(row.placaDivergente).toBe(true);
+    expect(kpis.ok).toBe(1);
+    expect(kpis.divergencias).toBe(0);
   });
 
   it("mantém o total da grid derivado da quantidade de linhas da base", () => {

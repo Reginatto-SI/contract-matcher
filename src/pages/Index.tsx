@@ -52,7 +52,7 @@ const Index = () => {
         }),
       ]);
       const baseImport = parseBaseWithStats(baseRaw);
-      const comp = parseComp(compRaw);
+      const comp = parseComp(compRaw, clienteLayout.id);
       const rows = match(baseImport.base, comp);
       setResults({
         empresa: empresa.trim(),
