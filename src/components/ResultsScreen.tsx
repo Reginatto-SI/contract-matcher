@@ -66,8 +66,16 @@ export interface SortState {
   direction: SortDirection;
 }
 
-const fmtNum = (n: number | null) =>
-  n === null ? "—" : n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// Formatação defensiva apenas para exibição: dados inesperados do Excel não devem derrubar a tela de resultados.
+const fmtNum = (n: unknown) => {
+  if (typeof n !== "number" || !Number.isFinite(n)) return "—";
+  return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const fmtCount = (value: unknown) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "0";
+  return value.toLocaleString("pt-BR");
+};
 
 const parseSortableNumber = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
@@ -270,7 +278,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
             <div className="hidden md:flex items-center gap-2">
               <ContextChip label="Empresa" value={empresa} />
               <ContextChip label="Cliente" value={cliente} />
-              <ContextChip label="Registros" value={totalAnalisado.toLocaleString("pt-BR")} accent />
+              <ContextChip label="Registros" value={fmtCount(totalAnalisado)} accent />
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -298,7 +306,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
         <div className="md:hidden mx-auto max-w-[1400px] px-6 pb-3 flex items-center gap-2 flex-wrap">
           <ContextChip label="Empresa" value={empresa} />
           <ContextChip label="Cliente" value={cliente} />
-          <ContextChip label="Registros" value={totalAnalisado.toLocaleString("pt-BR")} accent />
+          <ContextChip label="Registros" value={fmtCount(totalAnalisado)} accent />
         </div>
       </header>
 
@@ -309,12 +317,12 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
           <div className="text-sm leading-relaxed">
             <span className="text-foreground">
               Arquivo GRL053 importado com{" "}
-              <span className="font-semibold tabular-nums">{baseTotalArquivo.toLocaleString("pt-BR")}</span> registros.
+              <span className="font-semibold tabular-nums">{fmtCount(baseTotalArquivo)}</span> registros.
             </span>{" "}
             <span className="text-muted-foreground">
               Analisados:{" "}
               <span className="font-semibold tabular-nums text-foreground">
-                {totalAnalisado.toLocaleString("pt-BR")}
+                {fmtCount(totalAnalisado)}
               </span>
               .
             </span>
@@ -323,7 +331,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                 {" "}
                 Ignoradas{" "}
                 <span className="font-semibold tabular-nums text-warning">
-                  {baseIgnoradasModalidade.toLocaleString("pt-BR")}
+                  {fmtCount(baseIgnoradasModalidade)}
                 </span>{" "}
                 linhas por modalidade diferente de EXP.
               </span>
@@ -414,7 +422,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                 </Button>
               )}
               <span className="text-xs font-medium text-muted-foreground tabular-nums px-2.5 py-1 rounded-md bg-card border">
-                {filtered.length.toLocaleString("pt-BR")} de {rows.length.toLocaleString("pt-BR")}
+                {fmtCount(filtered.length)} de {fmtCount(rows.length)}
               </span>
             </div>
           </div>
@@ -502,7 +510,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
               <div className="text-muted-foreground tabular-nums">
                 Mostrando <span className="font-medium text-foreground">{rangeStart}</span>–
                 <span className="font-medium text-foreground">{rangeEnd}</span> de{" "}
-                <span className="font-medium text-foreground">{sorted.length.toLocaleString("pt-BR")}</span>
+                <span className="font-medium text-foreground">{fmtCount(sorted.length)}</span>
               </div>
               {totalPages > 1 && (
                 <div className="flex items-center gap-2">
@@ -798,7 +806,7 @@ const KpiCard = ({ label, value, active, tone, icon: Icon, onClick }: KpiProps) 
           <Icon className="h-4.5 w-4.5" strokeWidth={2.25} />
         </div>
         <div className={cn("text-2xl font-semibold tabular-nums leading-none", valueColor[tone])}>
-          {value.toLocaleString("pt-BR")}
+          {fmtCount(value)}
         </div>
       </div>
       <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold mt-3 leading-tight">
