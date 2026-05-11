@@ -64,6 +64,7 @@ describe("ResultsScreen Contrato MX", () => {
         ]}
         baseTotalArquivo={2}
         baseIgnoradasModalidade={0}
+        compIgnoradasFsCargaRecusada={0}
         onReset={() => {}}
       />,
     );

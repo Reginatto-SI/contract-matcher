@@ -55,6 +55,12 @@ export interface CompRow {
   raw: RawRow;
 }
 
+export interface ParseCompResult {
+  comp: CompRow[];
+  totalArquivo: number;
+  ignoradasFsCargaRecusada: number;
+}
+
 export interface MatchedRow {
   id: number;
   situacao: Situacao;
@@ -159,36 +165,78 @@ export function parseBase(rows: RawRow[]): BaseRow[] {
   return parseBaseWithStats(rows).base;
 }
 
+function normalizeFsDenomStatus(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .toUpperCase();
+}
+
+function isFsCargaRecusada(row: RawRow): boolean {
+  return (
+    normalizeFsDenomStatus(getCol(row, ["Denom. Status"])) ===
+    "CARGA RECUSADA"
+  );
+}
+
+export function parseCompWithStats(
+  rows: RawRow[],
+  clienteId: ClienteComplementarId = "inpasa",
+): ParseCompResult {
+  if (clienteId === "fs") {
+    const comp: CompRow[] = [];
+    let ignoradasFsCargaRecusada = 0;
+
+    rows.forEach((r) => {
+      // Regra específica do layout complementar FS: registros com Denom. Status = Carga recusada
+      // são descartados antes da análise para não entrar no vínculo, KPIs ou grid de conferência.
+      if (isFsCargaRecusada(r)) {
+        ignoradasFsCargaRecusada += 1;
+        return;
+      }
+
+      comp.push({
+        // Layout FS fixo: Pedido + Nº Nota Fiscal formam a chave; placa e peso são informativos.
+        placa: normalizePlaca(getCol(r, ["Placa Caminhão"])),
+        numeroNF: normalizeNota(getCol(r, ["Nº Nota Fiscal"])),
+        nrContrOriginal: normalizeContrato(getCol(r, ["Pedido"])),
+        totalLiquido: toNumber(getCol(r, ["Peso Líquido"])),
+        raw: r,
+      });
+    });
+
+    return {
+      comp,
+      totalArquivo: rows.length,
+      ignoradasFsCargaRecusada,
+    };
+  }
+
+  return {
+    comp: rows.map((r) => ({
+      placa: normalizePlaca(getCol(r, ["Placa"])),
+      numeroNF: normalizeNota(
+        getCol(r, ["Número NF", "Numero NF", "Nº NF", "Nr NF"]),
+      ),
+      nrContrOriginal: normalizeContrato(
+        getCol(r, [
+          "Nr Contr Original",
+          "Nro Contr Original",
+          "Numero Contr Original",
+        ]),
+      ),
+      totalLiquido: toNumber(getCol(r, ["Total Líquido", "Total Liquido"])),
+      raw: r,
+    })),
+    totalArquivo: rows.length,
+    ignoradasFsCargaRecusada: 0,
+  };
+}
+
 export function parseComp(
   rows: RawRow[],
   clienteId: ClienteComplementarId = "inpasa",
 ): CompRow[] {
-  if (clienteId === "fs") {
-    return rows.map((r) => ({
-      // Layout FS fixo: Pedido + Nº Nota Fiscal formam a chave; placa e peso são informativos.
-      placa: normalizePlaca(getCol(r, ["Placa Caminhão"])),
-      numeroNF: normalizeNota(getCol(r, ["Nº Nota Fiscal"])),
-      nrContrOriginal: normalizeContrato(getCol(r, ["Pedido"])),
-      totalLiquido: toNumber(getCol(r, ["Peso Líquido"])),
-      raw: r,
-    }));
-  }
-
-  return rows.map((r) => ({
-    placa: normalizePlaca(getCol(r, ["Placa"])),
-    numeroNF: normalizeNota(
-      getCol(r, ["Número NF", "Numero NF", "Nº NF", "Nr NF"]),
-    ),
-    nrContrOriginal: normalizeContrato(
-      getCol(r, [
-        "Nr Contr Original",
-        "Nro Contr Original",
-        "Numero Contr Original",
-      ]),
-    ),
-    totalLiquido: toNumber(getCol(r, ["Total Líquido", "Total Liquido"])),
-    raw: r,
-  }));
+  return parseCompWithStats(rows, clienteId).comp;
 }
 
 export function isValidMatchValue(value: string): boolean {

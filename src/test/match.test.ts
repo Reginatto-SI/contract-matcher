@@ -8,6 +8,7 @@ import {
   parseBase,
   parseBaseWithStats,
   parseComp,
+  parseCompWithStats,
 } from "@/lib/match";
 import type { BaseRow, CompRow } from "@/lib/match";
 import { dataEmissaoToTime, formatDataEmissao } from "@/lib/normalize";
@@ -75,6 +76,7 @@ describe("layouts fixos de clientes", () => {
       "Nº Nota Fiscal",
       "Peso Líquido",
       "Pedido",
+      "Denom. Status",
     ]);
   });
 
@@ -233,6 +235,7 @@ describe("parseComp FS", () => {
           "Nº Nota Fiscal": " NF 000456 ",
           "Placa Caminhão": " abc-1d23 ",
           "Peso Líquido": "1.234,50",
+          "Denom. Status": "Entregue",
         },
       ],
       "fs",
@@ -243,6 +246,72 @@ describe("parseComp FS", () => {
       numeroNF: "456",
       placa: "ABC1D23",
       totalLiquido: 1234.5,
+    });
+  });
+
+  it("ignora cargas recusadas do layout FS antes do matching e dos KPIs", () => {
+    const result = parseCompWithStats(
+      [
+        {
+          Pedido: "123",
+          "Nº Nota Fiscal": "456",
+          "Placa Caminhão": "ABC1234",
+          "Peso Líquido": 100,
+          "Denom. Status": " carga recusada ",
+        },
+        {
+          Pedido: "789",
+          "Nº Nota Fiscal": "999",
+          "Placa Caminhão": "DEF5678",
+          "Peso Líquido": 200,
+          "Denom. Status": "CARGA RECUSADA",
+        },
+        {
+          Pedido: "123",
+          "Nº Nota Fiscal": "456",
+          "Placa Caminhão": "ABC1234",
+          "Peso Líquido": 100,
+          "Denom. Status": "Autorizada",
+        },
+      ],
+      "fs",
+    );
+
+    const rows = match([baseRow()], result.comp);
+    const kpis = computeKpis(rows);
+
+    expect(result.totalArquivo).toBe(3);
+    expect(result.ignoradasFsCargaRecusada).toBe(2);
+    expect(result.comp).toHaveLength(1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].situacao).toBe("OK");
+    expect(kpis).toMatchObject({
+      total: 1,
+      ok: 1,
+      contratoNaoEncontrado: 0,
+      notaNaoEncontrada: 0,
+      divergencias: 0,
+    });
+  });
+
+  it("mantém cargas recusadas em outros layouts sem alterar o parsing existente", () => {
+    const result = parseCompWithStats([
+      {
+        "Nr Contr Original": "MTP 00123",
+        "Número NF": "000456",
+        Placa: "ABC1234",
+        "Total Líquido": "100,5",
+        "Denom. Status": "Carga recusada",
+      },
+    ]);
+
+    expect(result.ignoradasFsCargaRecusada).toBe(0);
+    expect(result.comp).toHaveLength(1);
+    expect(result.comp[0]).toMatchObject({
+      nrContrOriginal: "123",
+      numeroNF: "456",
+      placa: "ABC1234",
+      totalLiquido: 100.5,
     });
   });
 

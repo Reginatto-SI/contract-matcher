@@ -43,6 +43,7 @@ interface Props {
   rows: MatchedRow[];
   baseTotalArquivo: number;
   baseIgnoradasModalidade: number;
+  compIgnoradasFsCargaRecusada: number;
   onReset: () => void;
 }
 
@@ -176,7 +177,15 @@ const toneBorderLeft: Record<Tone, string> = {
 
 const situacaoBadge = (s: Situacao) => toneBadgeClass[situacaoTone[s]];
 
-export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIgnoradasModalidade, onReset }: Props) => {
+export const ResultsScreen = ({
+  empresa,
+  cliente,
+  rows,
+  baseTotalArquivo,
+  baseIgnoradasModalidade,
+  compIgnoradasFsCargaRecusada,
+  onReset,
+}: Props) => {
   const [filter, setFilter] = useState<FilterKind>("ALL");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -336,6 +345,17 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
                   {fmtCount(baseIgnoradasModalidade)}
                 </span>{" "}
                 linhas por modalidade diferente de EXP.
+              </span>
+            )}
+            {compIgnoradasFsCargaRecusada > 0 && (
+              <span className="text-muted-foreground">
+                {" "}
+                {/* Aviso específico do complementar FS: cargas recusadas foram descartadas antes da análise. */}
+                <span className="font-semibold tabular-nums text-warning">
+                  {fmtCount(compIgnoradasFsCargaRecusada)}
+                </span>{" "}
+                registros da FS foram ignorados por estarem com status
+                "Carga recusada".
               </span>
             )}
           </div>

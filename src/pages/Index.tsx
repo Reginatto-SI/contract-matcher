@@ -3,7 +3,7 @@ import { UploadScreen } from "@/components/UploadScreen";
 import { ResultsScreen } from "@/components/ResultsScreen";
 import { readXlsx } from "@/lib/parseXlsx";
 import { GRL053_LAYOUT, getClienteSuportado } from "@/lib/layouts";
-import { match, MatchedRow, parseBaseWithStats, parseComp } from "@/lib/match";
+import { match, MatchedRow, parseBaseWithStats, parseCompWithStats } from "@/lib/match";
 
 interface ResultsState {
   empresa: string;
@@ -11,6 +11,7 @@ interface ResultsState {
   rows: MatchedRow[];
   baseTotalArquivo: number;
   baseIgnoradasModalidade: number;
+  compIgnoradasFsCargaRecusada: number;
 }
 
 const Index = () => {
@@ -52,14 +53,15 @@ const Index = () => {
         }),
       ]);
       const baseImport = parseBaseWithStats(baseRaw);
-      const comp = parseComp(compRaw, clienteLayout.id);
-      const rows = match(baseImport.base, comp);
+      const compImport = parseCompWithStats(compRaw, clienteLayout.id);
+      const rows = match(baseImport.base, compImport.comp);
       setResults({
         empresa: empresa.trim(),
         cliente: cliente.trim(),
         rows,
         baseTotalArquivo: baseImport.totalArquivo,
         baseIgnoradasModalidade: baseImport.ignoradasModalidade,
+        compIgnoradasFsCargaRecusada: compImport.ignoradasFsCargaRecusada,
       });
     } catch (e) {
       setError(
@@ -78,6 +80,7 @@ const Index = () => {
         rows={results.rows}
         baseTotalArquivo={results.baseTotalArquivo}
         baseIgnoradasModalidade={results.baseIgnoradasModalidade}
+        compIgnoradasFsCargaRecusada={results.compIgnoradasFsCargaRecusada}
         onReset={() => setResults(null)}
       />
     );
