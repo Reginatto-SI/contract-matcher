@@ -34,6 +34,7 @@ import { exportExcel, exportPDF } from "@/lib/exporters";
 import { cn } from "@/lib/utils";
 import { dataEmissaoToTime, formatDataEmissao } from "@/lib/normalize";
 import { toast } from "@/hooks/use-toast";
+import { AppVersionLabel } from "@/components/AppVersionLabel";
 import { Grl053FiltersDialog } from "@/components/Grl053FiltersDialog";
 
 interface Props {
@@ -303,6 +304,7 @@ export const ResultsScreen = ({ empresa, cliente, rows, baseTotalArquivo, baseIg
       </header>
 
       <main className="mx-auto max-w-[1400px] px-6 py-5 space-y-4">
+        <AppVersionLabel className="text-center md:text-left" />
         {/* Resumo da importação */}
         <div className="flex items-start gap-3 rounded-lg border border-info/20 border-l-4 border-l-info bg-info-soft/40 p-3">
           <Info className="h-4 w-4 text-info mt-0.5 shrink-0" />

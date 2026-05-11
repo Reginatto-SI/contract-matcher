@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Upload, FileSpreadsheet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AppVersionLabel } from "@/components/AppVersionLabel";
 import { Grl053FiltersDialog } from "@/components/Grl053FiltersDialog";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -160,6 +161,7 @@ export const UploadScreen = ({ onSubmit, loading, error }: Props) => {
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-8">
+        <AppVersionLabel className="mb-4 text-center md:text-left" />
         <Card className="p-8">
           <h2 className="text-lg font-semibold mb-1">
             Iniciar nova conferência
