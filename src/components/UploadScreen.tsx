@@ -151,11 +151,17 @@ export const UploadScreen = ({ onSubmit, loading, error }: Props) => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-6xl px-6 py-4">
-          <h1 className="text-xl font-semibold">Conferência de Contratos</h1>
-          <p className="text-sm text-muted-foreground">
-            Cruzamento entre GRL053 (cooperativa) e relatório do cliente
-          </p>
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">Conferência de Contratos</h1>
+            <p className="text-sm text-muted-foreground">
+              Cruzamento entre GRL053 (cooperativa) e relatório do cliente
+            </p>
+          </div>
+          {/* Botão no header para orientar o usuário antes da importação do relatório base GRL053. */}
+          <div className="shrink-0">
+            <Grl053FiltersDialog />
+          </div>
         </div>
       </header>
 
@@ -175,18 +181,14 @@ export const UploadScreen = ({ onSubmit, loading, error }: Props) => {
 
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-medium text-sm">
-                    Relatório Base — GRL053
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Colunas: PLACA, CONTRATO, MOD, NOTA, CONTR. CLIENTE, APOS
-                    DESC
-                  </p>
-                </div>
-                {/* Botão reaproveitado na tela inicial para orientar o usuário antes da importação do GRL053. */}
-                <Grl053FiltersDialog />
+              <div>
+                <h3 className="font-medium text-sm">
+                  Relatório Base — GRL053
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Colunas: PLACA, CONTRATO, MOD, NOTA, CONTR. CLIENTE, APOS
+                  DESC
+                </p>
               </div>
               <FilePicker
                 label="Selecione o GRL053"
