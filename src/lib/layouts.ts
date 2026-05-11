@@ -46,6 +46,8 @@ export const CLIENTES_SUPORTADOS: Array<
       "Nº Nota Fiscal",
       "Peso Líquido",
       "Pedido",
+      // Coluna específica do complementar FS usada para descartar cargas recusadas antes da análise.
+      "Denom. Status",
     ],
     headerRow: 1,
   },
