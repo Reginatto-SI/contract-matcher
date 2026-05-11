@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Upload, FileSpreadsheet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Grl053FiltersDialog } from "@/components/Grl053FiltersDialog";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -174,11 +175,18 @@ export const UploadScreen = ({ onSubmit, loading, error }: Props) => {
 
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-3">
-              <div>
-                <h3 className="font-medium text-sm">Relatório Base — GRL053</h3>
-                <p className="text-xs text-muted-foreground">
-                  Colunas: PLACA, CONTRATO, MOD, NOTA, CONTR. CLIENTE, APOS DESC
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-medium text-sm">
+                    Relatório Base — GRL053
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Colunas: PLACA, CONTRATO, MOD, NOTA, CONTR. CLIENTE, APOS
+                    DESC
+                  </p>
+                </div>
+                {/* Botão reaproveitado na tela inicial para orientar o usuário antes da importação do GRL053. */}
+                <Grl053FiltersDialog />
               </div>
               <FilePicker
                 label="Selecione o GRL053"
