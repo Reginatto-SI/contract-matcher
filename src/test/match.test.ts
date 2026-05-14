@@ -15,6 +15,7 @@ import { dataEmissaoToTime, formatDataEmissao } from "@/lib/normalize";
 import { filterRowsByResultsSearch, sortMatchedRows } from "@/components/ResultsScreen";
 import {
   CLIENTES_SUPORTADOS,
+  GRL053_LAYOUT,
   DEFAULT_CLIENTE_ID,
   getClienteSuportado,
 } from "@/lib/layouts";
@@ -53,6 +54,41 @@ describe("layouts fixos de clientes", () => {
       "Inpasa",
       "FS",
     ]);
+  });
+
+  it("não exige Denom. Status nas colunas obrigatórias do GRL053", () => {
+    expect(GRL053_LAYOUT.requiredColumns).toEqual([
+      "PLACA",
+      "CONTRATO",
+      "MOD",
+      "NOTA",
+      "CONTR. CLIENTE",
+      "APOS DESC",
+    ]);
+    expect(GRL053_LAYOUT.requiredColumns).not.toContain("Denom. Status");
+  });
+
+  it("permite importar GRL053 sem Denom. Status", async () => {
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      [],
+      [],
+      ["PLACA", "CONTRATO", "MOD", "NOTA", "CONTR. CLIENTE", "APOS DESC"],
+      ["ABC1234", "10", "EXP", "456", "123", 100],
+    ]);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "GRL053");
+    const buffer = XLSX.write(workbook, { type: "array", bookType: "xlsx" });
+    const file = new File([buffer], "grl053.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    await expect(
+      readXlsx(file, {
+        headerRow: GRL053_LAYOUT.headerRow,
+        requiredColumns: GRL053_LAYOUT.requiredColumns,
+        fileLabel: "Relatório Base (GRL053)",
+      }),
+    ).resolves.toHaveLength(1);
   });
 
   it("mantém as colunas obrigatórias do layout complementar Inpasa", () => {
@@ -142,6 +178,55 @@ describe("parseBase", () => {
     expect(result.ignoradasModalidade).toBe(2);
     expect(result.base).toHaveLength(1);
     expect(result.base[0].modalidade).toBe("EXP");
+  });
+
+  it("ignora linhas EXP do GRL053 com Denom. Status igual a Carga recusada antes do matching", () => {
+    const result = parseBaseWithStats([
+      {
+        PLACA: "MBP8A19",
+        CONTRATO: "2688",
+        MOD: "EXP",
+        NOTA: "26159",
+        "CONTR. CLIENTE": "4700025330",
+        "Denom. Status": "  carga   recusada  ",
+        "APOS DESC": 30000,
+      },
+      {
+        PLACA: "ABC1234",
+        CONTRATO: "10",
+        MOD: "EXP",
+        NOTA: "456",
+        "CONTR. CLIENTE": "123",
+        "Denom. Status": "Entregue",
+        "APOS DESC": 100,
+      },
+    ]);
+
+    expect(result.totalArquivo).toBe(2);
+    expect(result.ignoradasModalidade).toBe(0);
+    expect(result.ignoradasCargaRecusada).toBe(1);
+    expect(result.base).toHaveLength(1);
+    expect(result.base[0].nota).toBe("456");
+  });
+
+  it("não deixa carga recusada gerar contrato não encontrado nem entrar nos KPIs", () => {
+    const baseImport = parseBaseWithStats([
+      {
+        PLACA: "MBP8A19",
+        CONTRATO: "2688",
+        MOD: "EXP",
+        NOTA: "26159",
+        "CONTR. CLIENTE": "4700025330",
+        "Denom. Status": "Carga recusada",
+        "APOS DESC": 30000,
+      },
+    ]);
+    const rows = match(baseImport.base, []);
+    const kpis = computeKpis(rows);
+
+    expect(rows).toHaveLength(0);
+    expect(kpis.total).toBe(0);
+    expect(kpis.contratoNaoEncontrado).toBe(0);
   });
 
   it("captura CONTRATO como contrato_interno informativo do GRL053 preservando letras e traços", () => {

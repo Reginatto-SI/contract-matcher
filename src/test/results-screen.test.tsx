@@ -64,6 +64,7 @@ describe("ResultsScreen Contrato MX", () => {
         ]}
         baseTotalArquivo={2}
         baseIgnoradasModalidade={0}
+        baseIgnoradasCargaRecusada={0}
         compIgnoradasFsCargaRecusada={0}
         onReset={() => {}}
       />,
@@ -78,5 +79,33 @@ describe("ResultsScreen Contrato MX", () => {
 
     expect(screen.getByText("MX-ABC-10")).toBeTruthy();
     expect(screen.queryByText("MX-ZZ-20")).toBeNull();
+  });
+
+  it("exibe Divergências de vínculo com classe crítica vermelha, não informativa azul", () => {
+    render(
+      <ResultsScreen
+        empresa="Cooperativa"
+        cliente="Inpasa"
+        rows={[
+          row({
+            situacao: "NOTA_OUTRO_CONTRATO",
+            detalhe: "Nota vinculada a outro contrato.",
+            base: { ...row().base, nota: "999" },
+            comp: { ...row().comp!, numeroNF: "999", nrContrOriginal: "987" },
+          }),
+        ]}
+        baseTotalArquivo={1}
+        baseIgnoradasModalidade={0}
+        baseIgnoradasCargaRecusada={0}
+        compIgnoradasFsCargaRecusada={0}
+        onReset={() => {}}
+      />,
+    );
+
+    const label = screen.getByText("Divergências de vínculo");
+    const card = label.closest("button");
+
+    expect(card?.innerHTML).toContain("text-destructive");
+    expect(card?.innerHTML).not.toContain("text-info");
   });
 });

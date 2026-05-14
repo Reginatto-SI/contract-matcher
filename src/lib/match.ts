@@ -45,6 +45,7 @@ export interface ParseBaseResult {
   base: BaseRow[];
   totalArquivo: number;
   ignoradasModalidade: number;
+  ignoradasCargaRecusada: number;
 }
 
 export interface CompRow {
@@ -77,6 +78,17 @@ export function normalizeModalidade(value: unknown): string {
   return String(value ?? "")
     .trim()
     .toUpperCase();
+}
+
+function normalizeDenomStatus(value: unknown): string {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function isCargaRecusadaStatus(value: unknown): boolean {
+  return normalizeDenomStatus(value) === "carga recusada";
 }
 
 function cleanInformativeText(value: unknown): string {
@@ -119,6 +131,7 @@ export function detectEmpresaFromGrl053(
 export function parseBaseWithStats(rows: RawRow[]): ParseBaseResult {
   const base: BaseRow[] = [];
   let ignoradasModalidade = 0;
+  let ignoradasCargaRecusada = 0;
 
   rows.forEach((r) => {
     const modalidade = normalizeModalidade(getCol(r, ["MOD"]));
@@ -126,6 +139,13 @@ export function parseBaseWithStats(rows: RawRow[]): ParseBaseResult {
     // Regra operacional do GRL053: somente expedições (MOD = EXP) entram na conferência e no matching.
     if (modalidade !== "EXP") {
       ignoradasModalidade += 1;
+      return;
+    }
+
+    // Regra operacional opcional do GRL053: quando a coluna Denom. Status existir,
+    // linhas EXP com Carga recusada ficam fora do escopo de cobrança e são descartadas antes do matching, KPIs, grid e exportações.
+    if (isCargaRecusadaStatus(getCol(r, ["Denom. Status"]))) {
+      ignoradasCargaRecusada += 1;
       return;
     }
 
@@ -158,6 +178,7 @@ export function parseBaseWithStats(rows: RawRow[]): ParseBaseResult {
     base,
     totalArquivo: rows.length,
     ignoradasModalidade,
+    ignoradasCargaRecusada,
   };
 }
 
@@ -165,17 +186,8 @@ export function parseBase(rows: RawRow[]): BaseRow[] {
   return parseBaseWithStats(rows).base;
 }
 
-function normalizeFsDenomStatus(value: unknown): string {
-  return String(value ?? "")
-    .trim()
-    .toUpperCase();
-}
-
 function isFsCargaRecusada(row: RawRow): boolean {
-  return (
-    normalizeFsDenomStatus(getCol(row, ["Denom. Status"])) ===
-    "CARGA RECUSADA"
-  );
+  return isCargaRecusadaStatus(getCol(row, ["Denom. Status"]));
 }
 
 export function parseCompWithStats(
