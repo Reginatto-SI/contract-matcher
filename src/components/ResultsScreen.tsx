@@ -43,12 +43,13 @@ interface Props {
   rows: MatchedRow[];
   baseTotalArquivo: number;
   baseIgnoradasModalidade: number;
+  baseIgnoradasCargaRecusada: number;
   compIgnoradasFsCargaRecusada: number;
   onReset: () => void;
 }
 
 type FilterKind = "ALL" | "OK" | "BASE_INVALIDA" | "CONTRATO" | "NOTA" | "DIVERGENCIAS" | "ALERTAS";
-type Tone = "success" | "destructive" | "warning" | "info";
+type Tone = "success" | "critical" | "destructive" | "warning" | "info";
 
 const PAGE_SIZE = 25;
 
@@ -155,14 +156,15 @@ const situacaoTone: Record<Situacao, Tone> = {
   OK: "success",
   REGISTRO_BASE_INVALIDO: "destructive",
   CONTRATO_NAO_ENCONTRADO: "destructive",
-  NOTA_NAO_ENCONTRADA: "warning",
-  NOTA_OUTRO_CONTRATO: "info",
-  CONTRATO_OUTRA_NOTA: "info",
-  DUPLICIDADE: "info",
+  NOTA_NAO_ENCONTRADA: "destructive",
+  NOTA_OUTRO_CONTRATO: "critical",
+  CONTRATO_OUTRA_NOTA: "critical",
+  DUPLICIDADE: "critical",
 };
 
 const toneBadgeClass: Record<Tone, string> = {
   success: "bg-success-soft text-success border-success/30",
+  critical: "bg-destructive text-destructive-foreground border-destructive",
   destructive: "bg-destructive-soft text-destructive border-destructive/30",
   warning: "bg-warning-soft text-warning border-warning/30",
   info: "bg-info-soft text-info border-info/30",
@@ -170,6 +172,7 @@ const toneBadgeClass: Record<Tone, string> = {
 
 const toneBorderLeft: Record<Tone, string> = {
   success: "before:bg-success/40",
+  critical: "before:bg-destructive",
   destructive: "before:bg-destructive",
   warning: "before:bg-warning",
   info: "before:bg-info",
@@ -183,6 +186,7 @@ export const ResultsScreen = ({
   rows,
   baseTotalArquivo,
   baseIgnoradasModalidade,
+  baseIgnoradasCargaRecusada,
   compIgnoradasFsCargaRecusada,
   onReset,
 }: Props) => {
@@ -347,6 +351,16 @@ export const ResultsScreen = ({
                 linhas por modalidade diferente de EXP.
               </span>
             )}
+            {baseIgnoradasCargaRecusada > 0 && (
+              <span className="text-muted-foreground">
+                {" "}
+                Linhas ignoradas por carga recusada:{" "}
+                <span className="font-semibold tabular-nums text-warning">
+                  {fmtCount(baseIgnoradasCargaRecusada)}
+                </span>
+                .
+              </span>
+            )}
             {compIgnoradasFsCargaRecusada > 0 && (
               <span className="text-muted-foreground">
                 {" "}
@@ -392,7 +406,7 @@ export const ResultsScreen = ({
             value={kpis.notaNaoEncontrada}
             icon={ReceiptText}
             active={filter === "NOTA"}
-            tone="warning"
+            tone="destructive"
             onClick={() => setFilterAndReset(filter === "NOTA" ? "ALL" : "NOTA")}
           />
           <KpiCard
@@ -400,7 +414,7 @@ export const ResultsScreen = ({
             value={kpis.divergencias}
             icon={GitCompare}
             active={filter === "DIVERGENCIAS"}
-            tone="info"
+            tone="critical"
             onClick={() => setFilterAndReset(filter === "DIVERGENCIAS" ? "ALL" : "DIVERGENCIAS")}
           />
           <KpiCard
@@ -482,6 +496,7 @@ export const ResultsScreen = ({
                       success: "border-l-transparent",
                       destructive: "border-l-destructive",
                       warning: "border-l-warning",
+                      critical: "border-l-destructive",
                       info: "border-l-info",
                     };
                     return (
@@ -688,6 +703,7 @@ const SectionCard = ({
 }) => {
   const toneRing: Record<Tone, string> = {
     success: "border-success/30 bg-success-soft/30",
+    critical: "border-destructive bg-destructive-soft/50",
     destructive: "border-destructive/30 bg-destructive-soft/30",
     warning: "border-warning/30 bg-warning-soft/30",
     info: "border-info/30 bg-info-soft/30",
@@ -796,18 +812,21 @@ interface KpiProps {
 const KpiCard = ({ label, value, active, tone, icon: Icon, onClick }: KpiProps) => {
   const ring: Record<Tone, string> = {
     success: "data-[active=true]:ring-success/50 data-[active=true]:border-success/40",
+    critical: "data-[active=true]:ring-destructive data-[active=true]:border-destructive",
     destructive: "data-[active=true]:ring-destructive/50 data-[active=true]:border-destructive/40",
     warning: "data-[active=true]:ring-warning/50 data-[active=true]:border-warning/40",
     info: "data-[active=true]:ring-info/50 data-[active=true]:border-info/40",
   };
   const iconBg: Record<Tone, string> = {
     success: "bg-success-soft text-success",
+    critical: "bg-destructive text-destructive-foreground",
     destructive: "bg-destructive-soft text-destructive",
     warning: "bg-warning-soft text-warning",
     info: "bg-info-soft text-info",
   };
   const valueColor: Record<Tone, string> = {
     success: "text-success",
+    critical: "text-destructive",
     destructive: "text-destructive",
     warning: "text-warning",
     info: "text-info",

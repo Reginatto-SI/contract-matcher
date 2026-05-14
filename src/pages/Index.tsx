@@ -11,6 +11,7 @@ interface ResultsState {
   rows: MatchedRow[];
   baseTotalArquivo: number;
   baseIgnoradasModalidade: number;
+  baseIgnoradasCargaRecusada: number;
   compIgnoradasFsCargaRecusada: number;
 }
 
@@ -61,6 +62,7 @@ const Index = () => {
         rows,
         baseTotalArquivo: baseImport.totalArquivo,
         baseIgnoradasModalidade: baseImport.ignoradasModalidade,
+        baseIgnoradasCargaRecusada: baseImport.ignoradasCargaRecusada,
         compIgnoradasFsCargaRecusada: compImport.ignoradasFsCargaRecusada,
       });
     } catch (e) {
@@ -80,6 +82,7 @@ const Index = () => {
         rows={results.rows}
         baseTotalArquivo={results.baseTotalArquivo}
         baseIgnoradasModalidade={results.baseIgnoradasModalidade}
+        baseIgnoradasCargaRecusada={results.baseIgnoradasCargaRecusada}
         compIgnoradasFsCargaRecusada={results.compIgnoradasFsCargaRecusada}
         onReset={() => setResults(null)}
       />
