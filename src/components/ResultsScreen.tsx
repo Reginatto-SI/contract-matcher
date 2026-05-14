@@ -80,6 +80,10 @@ const fmtCount = (value: unknown) => {
   return value.toLocaleString("pt-BR");
 };
 
+const getExactMatchComp = (row: MatchedRow) =>
+  // Registros auxiliares continuam no detalhe, mas a grid só trata placa cliente como correspondente em vínculo OK.
+  row.situacao === "OK" ? row.comp : null;
+
 const parseSortableNumber = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
   const normalized = String(value).trim().replace(/\./g, "").replace(",", ".");
@@ -138,13 +142,17 @@ export const sortMatchedRows = (rows: MatchedRow[], sort: SortState | null): Mat
         result = compareWithNullLast(a.base.placa || null, b.base.placa || null, sort.direction);
         break;
       case "placaCliente":
-        result = compareWithNullLast(a.comp?.placa || null, b.comp?.placa || null, sort.direction);
+        result = compareWithNullLast(getExactMatchComp(a)?.placa || null, getExactMatchComp(b)?.placa || null, sort.direction);
         break;
       case "pesoFiscal":
         result = compareWithNullLast(a.base.aposDesc, b.base.aposDesc, sort.direction);
         break;
       case "pesoFisico":
-        result = compareWithNullLast(a.comp?.totalLiquido ?? null, b.comp?.totalLiquido ?? null, sort.direction);
+        result = compareWithNullLast(
+          getExactMatchComp(a)?.totalLiquido ?? null,
+          getExactMatchComp(b)?.totalLiquido ?? null,
+          sort.direction,
+        );
         break;
     }
 
@@ -519,14 +527,14 @@ export const ResultsScreen = ({
                         <TableCell className="font-mono text-xs">{r.base.placa || "—"}</TableCell>
                         <TableCell className="font-mono text-xs">
                           <span className="inline-flex items-center gap-1">
-                            {r.comp?.placa || "—"}
+                            {getExactMatchComp(r)?.placa || "—"}
                             {r.placaDivergente && (
                               <AlertTriangle className="h-3.5 w-3.5 text-warning" aria-label="Placa divergente" />
                             )}
                           </span>
                         </TableCell>
                         <TableCell className="text-right tabular-nums text-sm">{fmtNum(r.base.aposDesc)}</TableCell>
-                        <TableCell className="text-right tabular-nums text-sm">{fmtNum(r.comp?.totalLiquido ?? null)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-sm">{fmtNum(getExactMatchComp(r)?.totalLiquido ?? null)}</TableCell>
                         <TableCell
                           className="text-xs text-muted-foreground max-w-[300px] truncate"
                           title={r.detalhe}

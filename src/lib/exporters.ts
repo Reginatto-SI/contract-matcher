@@ -13,23 +13,31 @@ interface ExportContext {
 const fmtNum = (n: number | null) =>
   n === null ? "" : n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const getExactMatchComp = (row: MatchedRow) =>
+  // Exportações seguem a grid: placa cliente só representa vínculo correspondente quando a situação é OK.
+  row.situacao === "OK" ? row.comp : null;
+
 export function exportExcel({ empresa, cliente, rows }: ExportContext) {
-  const data = rows.map((r) => ({
-    Situação: situacaoLabel[r.situacao],
-    "Data emissão": formatDataEmissao(r.base.data_emissao),
-    "Contrato Cliente (Base)": r.base.contratoCliente,
-    "Nota (Base)": r.base.nota,
-    "Placa Base": r.base.placa,
-    "Placa Cliente": r.comp?.placa ?? "",
-    "Peso Fiscal (Após Desc)": fmtNum(r.base.aposDesc),
-    "Peso Físico (Total Líquido)": fmtNum(r.comp?.totalLiquido ?? null),
-    Detalhe: r.detalhe,
-    "Contrato Original (Comp.)": r.comp?.nrContrOriginal ?? "",
-    "NF (Comp.)": r.comp?.numeroNF ?? "",
-    "Alerta Placa": r.placaDivergente ? "Sim" : "",
-    Empresa: empresa,
-    Cliente: cliente,
-  }));
+  const data = rows.map((r) => {
+    const exactComp = getExactMatchComp(r);
+
+    return {
+      Situação: situacaoLabel[r.situacao],
+      "Data emissão": formatDataEmissao(r.base.data_emissao),
+      "Contrato Cliente (Base)": r.base.contratoCliente,
+      "Nota (Base)": r.base.nota,
+      "Placa Base": r.base.placa,
+      "Placa Cliente": exactComp?.placa ?? "",
+      "Peso Fiscal (Após Desc)": fmtNum(r.base.aposDesc),
+      "Peso Físico (Total Líquido)": fmtNum(exactComp?.totalLiquido ?? null),
+      Detalhe: r.detalhe,
+      "Contrato Original (Comp.)": exactComp?.nrContrOriginal ?? "",
+      "NF (Comp.)": exactComp?.numeroNF ?? "",
+      "Alerta Placa": r.placaDivergente ? "Sim" : "",
+      Empresa: empresa,
+      Cliente: cliente,
+    };
+  });
   const ws = XLSX.utils.json_to_sheet(data);
   ws["!autofilter"] = { ref: ws["!ref"]! };
   const wb = XLSX.utils.book_new();
@@ -105,9 +113,9 @@ export function exportPDF({ empresa, cliente, rows }: ExportContext) {
       r.base.contratoCliente,
       r.base.nota,
       r.base.placa + (r.placaDivergente ? " (alerta)" : ""),
-      r.comp?.placa ?? "",
+      getExactMatchComp(r)?.placa ?? "",
       fmtNum(r.base.aposDesc),
-      fmtNum(r.comp?.totalLiquido ?? null),
+      fmtNum(getExactMatchComp(r)?.totalLiquido ?? null),
       r.detalhe,
     ]),
     styles: { fontSize: 8, cellPadding: 4 },

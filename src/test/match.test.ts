@@ -616,6 +616,74 @@ describe("match", () => {
     expect(row.comp).toEqual(compRow());
   });
 
+  it("não gera alerta de placa em vínculo OK com placas iguais", () => {
+    const [row] = match([baseRow({ placa: "ABC1234" })], [compRow({ placa: "ABC1234" })]);
+
+    expect(row.situacao).toBe("OK");
+    expect(row.placaDivergente).toBe(false);
+  });
+
+  it("gera alerta de placa em vínculo OK com placas diferentes", () => {
+    const [row] = match([baseRow({ placa: "ABC1234" })], [compRow({ placa: "XYZ9876" })]);
+
+    expect(row.situacao).toBe("OK");
+    expect(row.placaDivergente).toBe(true);
+  });
+
+  it("não gera alerta de placa em nota não encontrada mesmo com registro auxiliar do mesmo contrato", () => {
+    const [row] = match(
+      [baseRow({ contratoCliente: "4700025098", nota: "26294", placa: "BYH8I88" })],
+      [compRow({ nrContrOriginal: "4700025098", numeroNF: "11111", placa: "KDG1H50" })],
+    );
+
+    expect(row.situacao).toBe("NOTA_NAO_ENCONTRADA");
+    expect(row.comp?.placa).toBe("KDG1H50");
+    expect(row.placaDivergente).toBe(false);
+  });
+
+  it("não gera alerta de placa em contrato não encontrado", () => {
+    const [row] = match(
+      [baseRow({ contratoCliente: "999", nota: "456", placa: "ABC1234" })],
+      [compRow({ nrContrOriginal: "123", numeroNF: "456", placa: "XYZ9876" })],
+    );
+
+    expect(row.situacao).toBe("CONTRATO_NAO_ENCONTRADO");
+    expect(row.placaDivergente).toBe(false);
+  });
+
+  it("não gera alerta de placa em nota vinculada a outro contrato", () => {
+    const [row] = match(
+      [baseRow({ contratoCliente: "123", nota: "456", placa: "ABC1234" })],
+      [
+        compRow({ nrContrOriginal: "999", numeroNF: "456", placa: "XYZ9876" }),
+        compRow({ nrContrOriginal: "123", numeroNF: "999", placa: "ZZZ9999" }),
+      ],
+    );
+
+    expect(row.situacao).toBe("NOTA_OUTRO_CONTRATO");
+    expect(row.placaDivergente).toBe(false);
+  });
+
+  it("conta KPI de Alertas apenas para vínculos OK com placa divergente", () => {
+    const rows = match(
+      [
+        baseRow({ contratoCliente: "100", nota: "1", placa: "AAA1111" }),
+        baseRow({ contratoCliente: "200", nota: "2", placa: "BBB2222" }),
+        baseRow({ contratoCliente: "300", nota: "3", placa: "CCC3333" }),
+        baseRow({ contratoCliente: "400", nota: "4", placa: "DDD4444" }),
+      ],
+      [
+        compRow({ nrContrOriginal: "100", numeroNF: "1", placa: "AAA1111" }),
+        compRow({ nrContrOriginal: "200", numeroNF: "2", placa: "XXX9999" }),
+        compRow({ nrContrOriginal: "300", numeroNF: "99", placa: "YYY9999" }),
+      ],
+    );
+    const kpis = computeKpis(rows);
+
+    expect(rows.map((row) => row.placaDivergente)).toEqual([false, true, false, false]);
+    expect(kpis.alertas).toBe(1);
+  });
+
   it("cruza GRL053 CONTR. CLIENTE + NOTA com FS Pedido + Nº Nota Fiscal", () => {
     const fsComp = parseComp(
       [
@@ -801,6 +869,28 @@ describe("sortMatchedRows", () => {
         (row) => row.base.aposDesc,
       ),
     ).toEqual([10, 2, null]);
+  });
+
+  it("ordena Peso Físico sem usar peso auxiliar de linhas sem vínculo OK", () => {
+    const rows = match(
+      [
+        baseRow({ contratoCliente: "100", nota: "1" }),
+        baseRow({ contratoCliente: "200", nota: "2" }),
+        baseRow({ contratoCliente: "300", nota: "3" }),
+      ],
+      [
+        compRow({ nrContrOriginal: "100", numeroNF: "1", totalLiquido: 10 }),
+        compRow({ nrContrOriginal: "200", numeroNF: "99", totalLiquido: 999 }),
+        compRow({ nrContrOriginal: "300", numeroNF: "3", totalLiquido: 20 }),
+      ],
+    );
+
+    expect(rows.map((row) => row.situacao)).toEqual(["OK", "NOTA_NAO_ENCONTRADA", "OK"]);
+    expect(
+      sortMatchedRows(rows, { key: "pesoFisico", direction: "desc" }).map(
+        (row) => row.base.contratoCliente,
+      ),
+    ).toEqual(["300", "100", "200"]);
   });
 
   it("ordena data por valor real e preserva valores inválidos ao final", () => {
