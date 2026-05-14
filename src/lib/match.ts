@@ -60,6 +60,7 @@ export interface ParseCompResult {
   comp: CompRow[];
   totalArquivo: number;
   ignoradasFsCargaRecusada: number;
+  ignoredKeys: string[];
 }
 
 export interface MatchedRow {
@@ -190,12 +191,17 @@ function isFsCargaRecusada(row: RawRow): boolean {
   return isCargaRecusadaStatus(getCol(row, ["Denom. Status"]));
 }
 
+export function fsCargaRecusadaKey(contrato: string, nota: string): string {
+  return `${contrato}_${nota}`;
+}
+
 export function parseCompWithStats(
   rows: RawRow[],
   clienteId: ClienteComplementarId = "inpasa",
 ): ParseCompResult {
   if (clienteId === "fs") {
     const comp: CompRow[] = [];
+    const ignoredKeys: string[] = [];
     let ignoradasFsCargaRecusada = 0;
 
     rows.forEach((r) => {
@@ -203,6 +209,12 @@ export function parseCompWithStats(
       // são descartados antes da análise para não entrar no vínculo, KPIs ou grid de conferência.
       if (isFsCargaRecusada(r)) {
         ignoradasFsCargaRecusada += 1;
+        // Chave operacional recusada da FS: Pedido + Nº Nota Fiscal normalizados, para excluir também a linha equivalente do GRL053.
+        const contratoRecusado = normalizeContrato(getCol(r, ["Pedido"]));
+        const notaRecusada = normalizeNota(getCol(r, ["Nº Nota Fiscal"]));
+        if (isValidMatchValue(contratoRecusado) && isValidMatchValue(notaRecusada)) {
+          ignoredKeys.push(fsCargaRecusadaKey(contratoRecusado, notaRecusada));
+        }
         return;
       }
 
@@ -220,6 +232,7 @@ export function parseCompWithStats(
       comp,
       totalArquivo: rows.length,
       ignoradasFsCargaRecusada,
+      ignoredKeys,
     };
   }
 
@@ -241,6 +254,7 @@ export function parseCompWithStats(
     })),
     totalArquivo: rows.length,
     ignoradasFsCargaRecusada: 0,
+    ignoredKeys: [],
   };
 }
 
@@ -267,10 +281,15 @@ function getBaseInvalidDetail(b: BaseRow): string | null {
   return "Registro do GRL053 sem nota fiscal válida.";
 }
 
-export function match(base: BaseRow[], comp: CompRow[]): MatchedRow[] {
+export interface MatchOptions {
+  ignoredKeys?: string[];
+}
+
+export function match(base: BaseRow[], comp: CompRow[], options: MatchOptions = {}): MatchedRow[] {
   const byKey = new Map<string, CompRow[]>();
   const byContrato = new Map<string, CompRow[]>();
   const byNota = new Map<string, CompRow[]>();
+  const ignoredKeys = new Set(options.ignoredKeys ?? []);
 
   for (const c of comp) {
     // Complementar inválido não entra nos índices porque não é apto para matching operacional.
@@ -291,6 +310,11 @@ export function match(base: BaseRow[], comp: CompRow[]): MatchedRow[] {
 
   const result: MatchedRow[] = [];
   base.forEach((b, idx) => {
+    // Regra específica recebida do complementar FS: se CONTR. CLIENTE + NOTA estiver entre as cargas recusadas, a base fica fora da conferência.
+    if (ignoredKeys.has(fsCargaRecusadaKey(b.contratoCliente, b.nota))) {
+      return;
+    }
+
     const invalidBaseDetail = getBaseInvalidDetail(b);
 
     // GRL053 é fonte de verdade: linha inválida da base permanece na grid com status próprio.

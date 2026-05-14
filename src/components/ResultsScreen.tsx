@@ -368,8 +368,7 @@ export const ResultsScreen = ({
                 <span className="font-semibold tabular-nums text-warning">
                   {fmtCount(compIgnoradasFsCargaRecusada)}
                 </span>{" "}
-                registros da FS foram ignorados por estarem com status
-                "Carga recusada".
+                cargas recusadas da FS foram desconsideradas da análise.
               </span>
             )}
           </div>
