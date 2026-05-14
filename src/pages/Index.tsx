@@ -55,7 +55,9 @@ const Index = () => {
       ]);
       const baseImport = parseBaseWithStats(baseRaw);
       const compImport = parseCompWithStats(compRaw, clienteLayout.id);
-      const rows = match(baseImport.base, compImport.comp);
+      const rows = match(baseImport.base, compImport.comp, {
+        ignoredKeys: compImport.ignoredKeys,
+      });
       setResults({
         empresa: empresa.trim(),
         cliente: cliente.trim(),

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeKpis,
   detectEmpresaFromGrl053,
+  fsCargaRecusadaKey,
   match,
   normalizeEmpresaDisplay,
   parseBase,
@@ -370,6 +371,68 @@ describe("parseComp FS", () => {
     expect(result.comp).toHaveLength(1);
     expect(rows).toHaveLength(1);
     expect(rows[0].situacao).toBe("OK");
+    expect(kpis).toMatchObject({
+      total: 1,
+      ok: 1,
+      contratoNaoEncontrado: 0,
+      notaNaoEncontrada: 0,
+      divergencias: 0,
+    });
+  });
+
+  it("gera chave ignorada para FS com Pedido + Nº Nota Fiscal de carga recusada", () => {
+    const result = parseCompWithStats(
+      [
+        {
+          Pedido: "4700025330",
+          "Nº Nota Fiscal": "26159",
+          "Placa Caminhão": "MBP8A19",
+          "Peso Líquido": 30000,
+          "Denom. Status": "Carga recusada",
+        },
+      ],
+      "fs",
+    );
+
+    expect(result.comp).toHaveLength(0);
+    expect(result.ignoradasFsCargaRecusada).toBe(1);
+    expect(result.ignoredKeys).toEqual(["4700025330_26159"]);
+    expect(fsCargaRecusadaKey("4700025330", "26159")).toBe("4700025330_26159");
+  });
+
+  it("não deixa a base GRL053 com chave recusada da FS gerar erro, KPI ou linha operacional", () => {
+    const compImport = parseCompWithStats(
+      [
+        {
+          Pedido: "4700025330",
+          "Nº Nota Fiscal": "26159",
+          "Placa Caminhão": "MBP8A19",
+          "Peso Líquido": 30000,
+          "Denom. Status": "Carga recusada",
+        },
+        {
+          Pedido: "123",
+          "Nº Nota Fiscal": "456",
+          "Placa Caminhão": "ABC1234",
+          "Peso Líquido": 100,
+          "Denom. Status": "Autorizada",
+        },
+      ],
+      "fs",
+    );
+    const rows = match(
+      [
+        baseRow({ contratoCliente: "4700025330", nota: "26159", placa: "MBP8A19" }),
+        baseRow({ contratoCliente: "123", nota: "456" }),
+      ],
+      compImport.comp,
+      { ignoredKeys: compImport.ignoredKeys },
+    );
+    const kpis = computeKpis(rows);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].base.nota).toBe("456");
+    expect(rows.some((row) => row.base.nota === "26159")).toBe(false);
     expect(kpis).toMatchObject({
       total: 1,
       ok: 1,

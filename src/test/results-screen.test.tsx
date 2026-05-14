@@ -108,4 +108,29 @@ describe("ResultsScreen Contrato MX", () => {
     expect(card?.innerHTML).toContain("text-destructive");
     expect(card?.innerHTML).not.toContain("text-info");
   });
+
+  it("não exibe na grid uma carga recusada da FS já removida do resultado operacional", () => {
+    render(
+      <ResultsScreen
+        empresa="Cooperativa"
+        cliente="FS"
+        rows={[
+          row({
+            id: 2,
+            base: { ...row().base, contratoCliente: "123", nota: "456" },
+            comp: { ...row().comp!, nrContrOriginal: "123", numeroNF: "456" },
+          }),
+        ]}
+        baseTotalArquivo={2}
+        baseIgnoradasModalidade={0}
+        baseIgnoradasCargaRecusada={0}
+        compIgnoradasFsCargaRecusada={1}
+        onReset={() => {}}
+      />,
+    );
+
+    expect(screen.queryByText("26159")).toBeNull();
+    expect(screen.queryByText("4700025330")).toBeNull();
+    expect(screen.getByText(/cargas recusadas da FS foram desconsideradas da análise/)).toBeTruthy();
+  });
 });
