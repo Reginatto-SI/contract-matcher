@@ -312,7 +312,8 @@ export function match(base: BaseRow[], comp: CompRow[]): MatchedRow[] {
     } else if (matchesKey.length === 1) {
       situacao = "OK";
       comp = matchesKey[0];
-      detalhe = "Contrato e nota conferem com o complementar.";
+      // Mensagem de Vínculo OK simplificada para linguagem operacional do usuário.
+      detalhe = "Rel. GRL053 e Armazém OK";
     } else if (matchesContrato.length === 0 && matchesNota.length === 0) {
       situacao = "CONTRATO_NAO_ENCONTRADO";
       detalhe = "Contrato e nota não foram localizados no complementar.";

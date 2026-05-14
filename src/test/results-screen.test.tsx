@@ -21,7 +21,7 @@ Object.defineProperty(window, "matchMedia", {
 const row = (overrides: Partial<MatchedRow> = {}): MatchedRow => ({
   id: 1,
   situacao: "OK",
-  detalhe: "Contrato e nota conferem com o complementar.",
+  detalhe: "Rel. GRL053 e Armazém OK",
   placaDivergente: false,
   base: {
     placa: "ABC1234",

@@ -464,6 +464,7 @@ describe("match", () => {
     const [row] = match([baseRow()], [compRow()]);
 
     expect(row.situacao).toBe("OK");
+    expect(row.detalhe).toBe("Rel. GRL053 e Armazém OK");
     expect(row.comp).toEqual(compRow());
   });
 
