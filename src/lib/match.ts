@@ -376,6 +376,8 @@ export function match(base: BaseRow[], comp: CompRow[], options: MatchOptions = 
     }
 
     const placaDivergente = !!(
+      // A placa é alerta secundário: só compara após vínculo exato CONTR. CLIENTE + NOTA.
+      situacao === "OK" &&
       comp &&
       b.placa &&
       comp.placa &&
