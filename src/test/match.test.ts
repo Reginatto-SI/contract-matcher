@@ -995,3 +995,46 @@ describe("KPIs filtrados da conferência", () => {
     expect(filterRowsByResultsSearch(rows, "spn5b89").map((row) => row.comp?.placa)).toEqual(["SPN5B89"]);
   });
 });
+
+describe("parseComp Inpasa - Nova Mutum", () => {
+  it("mapeia Contrato Original, Número e Peso Final; placa fica vazia", () => {
+    const [row] = parseComp(
+      [
+        {
+          "Contrato Original": "MTP 34843",
+          "Número": " 000456 ",
+          "Peso Final": "1.234,50",
+        },
+      ],
+      "inpasa-nova-mutum",
+    );
+
+    expect(row).toMatchObject({
+      nrContrOriginal: "34843",
+      numeroNF: "456",
+      placa: "",
+      totalLiquido: 1234.5,
+    });
+  });
+
+  it("gera vínculo OK contra GRL053 sem alerta de placa quando complementar não tem placa", () => {
+    const comp = parseComp(
+      [
+        {
+          "Contrato Original": "AFX 35232 - 34742",
+          "Número": "NF 000789",
+          "Peso Final": 500,
+        },
+      ],
+      "inpasa-nova-mutum",
+    );
+    const [row] = match(
+      [baseRow({ contratoCliente: "35232", nota: "789", placa: "ABC1234" })],
+      comp,
+    );
+
+    expect(row.situacao).toBe("OK");
+    expect(row.placaDivergente).toBe(false);
+  });
+});
+
