@@ -1,4 +1,4 @@
-export type ClienteComplementarId = "inpasa" | "fs";
+export type ClienteComplementarId = "inpasa" | "fs" | "inpasa-nova-mutum";
 
 export interface FixedLayoutConfig {
   id: string;
@@ -50,6 +50,14 @@ export const CLIENTES_SUPORTADOS: Array<
       // Coluna específica do complementar FS usada para descartar cargas recusadas antes da análise.
       "Denom. Status",
     ],
+    headerRow: 1,
+  },
+  {
+    id: "inpasa-nova-mutum",
+    label: "Inpasa - Nova Mutum",
+    // Layout complementar Inpasa - Nova Mutum: não possui coluna de placa nem dados de transporte.
+    // Vínculo é feito apenas por Contrato Original + Número; Peso Final é informativo.
+    requiredColumns: ["Contrato Original", "Número", "Peso Final"],
     headerRow: 1,
   },
 ];
