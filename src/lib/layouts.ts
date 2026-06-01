@@ -58,7 +58,8 @@ export const CLIENTES_SUPORTADOS: Array<
     // Layout complementar Inpasa - Nova Mutum: não possui coluna de placa nem dados de transporte.
     // Vínculo é feito apenas por Contrato Original + Número; Peso Final é informativo.
     requiredColumns: ["Contrato Original", "Número", "Peso Final"],
-    headerRow: 1,
+    // Cabeçalho real está na linha 2 (linha 1 contém agrupadores como "Contrato", "Entrada", "Nota Fiscal").
+    headerRow: 2,
   },
 ];
 
