@@ -47,12 +47,12 @@ const compRow = (overrides: Partial<CompRow> = {}): CompRow => ({
 });
 
 describe("layouts fixos de clientes", () => {
-  it("mantém Inpasa como cliente padrão da V1", () => {
+  it("mantém Inpasa - Sinop como label visual do cliente padrão da V1", () => {
     const cliente = getClienteSuportado(DEFAULT_CLIENTE_ID);
 
-    expect(cliente.label).toBe("Inpasa");
+    expect(cliente.label).toBe("Inpasa - Sinop");
     expect(CLIENTES_SUPORTADOS.map((item) => item.label)).toEqual([
-      "Inpasa",
+      "Inpasa - Sinop",
       "FS",
     ]);
   });
