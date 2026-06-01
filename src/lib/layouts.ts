@@ -27,7 +27,8 @@ export const CLIENTES_SUPORTADOS: Array<
 > = [
   {
     id: "inpasa",
-    label: "Inpasa",
+    // Label operacional exibido ao usuário; o id e as colunas permanecem o layout fixo Inpasa da V1.
+    label: "Inpasa - Sinop",
     requiredColumns: [
       "Placa",
       "Número NF",
