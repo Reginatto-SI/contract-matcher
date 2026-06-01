@@ -236,6 +236,23 @@ export function parseCompWithStats(
     };
   }
 
+  if (clienteId === "inpasa-nova-mutum") {
+    return {
+      // Layout Inpasa - Nova Mutum: sem placa nem dados de transporte.
+      // Vínculo apenas por Contrato Original + Número; Peso Final é informativo.
+      comp: rows.map((r) => ({
+        placa: "",
+        numeroNF: normalizeNota(getCol(r, ["Número"])),
+        nrContrOriginal: normalizeContrato(getCol(r, ["Contrato Original"])),
+        totalLiquido: toNumber(getCol(r, ["Peso Final"])),
+        raw: r,
+      })),
+      totalArquivo: rows.length,
+      ignoradasFsCargaRecusada: 0,
+      ignoredKeys: [],
+    };
+  }
+
   return {
     comp: rows.map((r) => ({
       placa: normalizePlaca(getCol(r, ["Placa"])),
