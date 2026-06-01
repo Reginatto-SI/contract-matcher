@@ -1,4 +1,4 @@
-export type ClienteComplementarId = "inpasa" | "fs";
+export type ClienteComplementarId = "inpasa" | "fs" | "inpasa-nova-mutum";
 
 export interface FixedLayoutConfig {
   id: string;
