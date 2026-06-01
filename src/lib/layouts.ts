@@ -52,6 +52,14 @@ export const CLIENTES_SUPORTADOS: Array<
     ],
     headerRow: 1,
   },
+  {
+    id: "inpasa-nova-mutum",
+    label: "Inpasa - Nova Mutum",
+    // Layout complementar Inpasa - Nova Mutum: não possui coluna de placa nem dados de transporte.
+    // Vínculo é feito apenas por Contrato Original + Número; Peso Final é informativo.
+    requiredColumns: ["Contrato Original", "Número", "Peso Final"],
+    headerRow: 1,
+  },
 ];
 
 export const DEFAULT_CLIENTE_ID = "inpasa";
